@@ -1,0 +1,26 @@
+.bg-grid-pattern {
+  background-image: linear-gradient(to right, rgba(var(--primary-rgb), 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--primary-rgb), 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.bg-dots-pattern {
+  background-image: radial-gradient(rgba(var(--primary-rgb), 0.2) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.bg-gradient-radial {
+  background: radial-gradient(circle at center, var(--primary-color) 0%, transparent 70%);
+}
+
+.pattern-waves {
+  background-color: transparent;
+  background-image: 
+    linear-gradient(135deg, rgba(var(--primary-rgb), 0.1) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(var(--primary-rgb), 0.1) 25%, transparent 25%),
+    linear-gradient(45deg, rgba(var(--primary-rgb), 0.1) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(var(--primary-rgb), 0.1) 25%, transparent 25%);
+  background-position: 10px 0, 10px 0, 0 0, 0 0;
+  background-size: 20px 20px;
+  background-repeat: repeat;
+} 

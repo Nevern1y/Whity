@@ -1,0 +1,376 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String            @id @default(cuid())
+  name                String?
+  email               String?           @unique
+  emailVerified       DateTime?
+  image               String?
+  hashedPassword      String?
+  role                Role              @default(USER)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  accounts            Account[]
+  sessions            Session[]
+  authoredCourses     Course[]          @relation("AuthoredCourses")
+  notifications       Notification[]
+  progress            Progress[]        // Прогресс по курсам
+  activities          Activity[]
+  sentMessages        Message[]         @relation("SentMessages")
+  receivedMessages    Message[]         @relation("ReceivedMessages")
+  userAchievements    UserAchievement[]
+  news                News[]            @relation("NewsAuthor")
+  articles            Article[]         @relation("AuthoredArticles")
+  sentFriendships     Friendship[]      @relation("SentFriendRequests")
+  receivedFriendships Friendship[]      @relation("ReceivedFriendRequests")
+  lastActive          DateTime?
+  preferences         Json?
+  totalPoints         Int               @default(0)
+  level               Int               @default(1)
+  stats               UserStats?
+  totalExperience     Int               @default(0)
+  completedLessons    Int               @default(0)
+  lastLoginAt         DateTime?
+  isOnline            Boolean           @default(false)
+  courseProgress      CourseProgress[]
+  lessonComments      LessonComment[]
+  courseRatings       CourseRating[]    @relation("UserRatings")
+  enrolledCourses     Course[]          @relation("EnrolledCourses")
+  twoFactorEnabled    Boolean           @default(false) @map("two_factor_enabled")
+  sessionTimeout      Int               @default(30) @map("session_timeout")
+  securityLogs        SecurityLog[]
+  securitySettings    Json?             @default("{}")
+
+  @@index([email])
+  @@map("users")
+}
+
+model Article {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation("AuthoredArticles", fields: [authorId], references: [id])
+
+  @@map("articles")
+}
+
+model Course {
+  id            String           @id @default(cuid())
+  title         String
+  description   String          @db.Text
+  image         String?
+  level         Level           @default(BEGINNER)
+  duration      String
+  published     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  authorId      String
+  author        User     @relation("AuthoredCourses", fields: [authorId], references: [id])
+  progress      Progress[]
+  lessons       Lesson[]
+  courseProgress CourseProgress[]
+  courseRatings CourseRating[]    @relation("CourseRatings")
+  students      User[]   @relation("EnrolledCourses")
+
+  @@index([authorId])
+  @@map("courses")
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  description String   @db.Text
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("activities")
+}
+
+model Progress {
+  id            String   @id @default(cuid())
+  userId        String
+  courseId      String
+  lessonId      String?
+  completed     Int      @default(0)
+  totalTimeSpent Int     @default(0)
+  user          User     @relation("UserProgress", fields: [userId], references: [id], onDelete: Cascade)
+  course        Course   @relation("CourseProgress", fields: [courseId], references: [id], onDelete: Cascade)
+  lesson        Lesson?  @relation("LessonProgress", fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, courseId, lessonId])
+  @@index([userId, completed])
+  @@map("progress")
+}
+
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  image       String?
+  authorId    String
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  author      User     @relation("NewsAuthor", fields: [authorId], references: [id])
+
+  @@index([authorId])
+  @@map("news")
+}
+
+model Lesson {
+  id        String     @id @default(cuid())
+  title     String
+  content   String     @db.Text
+  courseId  String
+  createdAt DateTime   @default(now())
+  position  Int        @default(0)
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  Progress[] @relation("LessonProgress")
+  comments  LessonComment[] @relation("LessonComments")
+
+  @@index([courseId])
+  @@map("lessons")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String
+  read      Boolean  @default(false)
+  link      String?
+  metadata  String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model KnowledgeArticle {
+  id        String   @id @default(cuid())
+  title     String
+  content   String // Убрали @db.Text для SQLite
+  category  String
+  type      String   @default("article")
+  readTime  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Friendship {
+  id         String           @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  sender     User             @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User             @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@map("friendships")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+  read       Boolean  @default(false)
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Achievement {
+  id               String            @id @default(cuid())
+  title            String
+  description      String
+  icon             String?
+  type             String
+  condition        Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  type          String
+  title         String
+  description   String
+  progress      Int         @default(0)
+  completed     Boolean     @default(false)
+  user          User        @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation("AchievementUsers", fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model UserStats {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  coursesCompleted  Int      @default(0)
+  achievementsCount Int      @default(0)
+  totalTimeSpent    Int      @default(0)
+  lastCalculated    DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_stats")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum NotificationType {
+  COURSE
+  ACHIEVEMENT
+  MESSAGE
+  NEWS
+  SYSTEM
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model CourseProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  courseId    String
+  progress    Float    @default(0)
+  completedAt DateTime?
+  lastAccessedAt DateTime @default(now())
+  totalTimeSpent Int     @default(0)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@map("course_progress")
+}
+
+model LessonComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  lessonId  String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lesson    Lesson   @relation("LessonComments", fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserComments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("lesson_comments")
+}
+
+model CourseRating {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?  @db.Text
+  courseId  String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course Course @relation("CourseRatings", fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+  @@index([userId])
+  @@index([courseId])
+  @@map("course_ratings")
+}
+
+model SecurityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  event     String
+  ip        String
+  location  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("security_logs")
+}
