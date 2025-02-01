@@ -2,7 +2,7 @@
 
 import { Book, Newspaper, MessageSquare, Home, Menu, ArrowLeft, Trophy } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -14,13 +14,24 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { UserNav } from "@/components/user-nav"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Logo } from "@/components/ui/logo"
+import { useUserStore } from "@/lib/store/user-store"
+import { useSyncUserImage } from "@/hooks/use-sync-user-image"
 
 export function Header() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, update } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const isMobile = useMediaQuery("(max-width: 768px)")
   const isAuthPage = pathname?.startsWith('/auth')
+  const setUserImage = useUserStore((state) => state.setUserImage)
+
+  useSyncUserImage()
+
+  useEffect(() => {
+    if (session?.user?.image) {
+      setUserImage(session.user.image)
+    }
+  }, [session?.user?.image, setUserImage])
 
   if (isAuthPage) return null
 
@@ -106,7 +117,7 @@ export function Header() {
             <>
               <NotificationsButton />
               <ThemeToggle />
-              <UserNav />
+              <UserNav user={session.user} />
             </>
           ) : (
             <>

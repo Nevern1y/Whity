@@ -1,99 +1,100 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+
+interface User {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+  role: string
+  createdAt: Date
+}
+
+interface Friendship {
+  id: string
+  senderId: string
+  receiverId: string
+  status: string
+}
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 })
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
-    const query = searchParams.get("q")?.toLowerCase() || ""
+    const query = searchParams.get("q")
+    const role = searchParams.get("role")
+    const status = searchParams.get("status")
 
     if (!query) {
       return NextResponse.json([])
     }
 
-    // Используем LIKE для MySQL с нижним регистром
     const users = await prisma.user.findMany({
       where: {
-        AND: [
-          {
-            OR: [
-              {
-                name: {
-                  contains: query,
-                  not: null,
-                }
-              },
-              {
-                email: {
-                  contains: query,
-                  not: null,
-                }
-              }
-            ]
-          },
-          {
-            id: {
-              not: session.user.id
-            }
-          }
-        ]
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-      },
-      take: 10, // Ограничиваем количество результатов
-    })
-
-    // Получаем статусы дружбы для найденных пользователей
-    const friendships = await prisma.friendship.findMany({
-      where: {
         OR: [
-          { 
-            AND: [
-              { senderId: session.user.id },
-              { receiverId: { in: users.map(u => u.id) } }
-            ]
-          },
-          { 
-            AND: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } }
+        ],
+        NOT: {
+          id: session.user.id
+        },
+        ...(role && { role })
+      },
+      include: {
+        sentFriendships: {
+          where: {
+            OR: [
               { receiverId: session.user.id },
-              { senderId: { in: users.map(u => u.id) } }
+              { senderId: session.user.id }
             ]
           }
-        ]
+        },
+        receivedFriendships: {
+          where: {
+            OR: [
+              { receiverId: session.user.id },
+              { senderId: session.user.id }
+            ]
+          }
+        }
       }
+    }) as (User & { sentFriendships: Friendship[], receivedFriendships: Friendship[] })[]
+
+    // Фильтруем по статусу дружбы, если указан
+    const filteredUsers = users.filter((u: User & { sentFriendships: Friendship[], receivedFriendships: Friendship[] }) => {
+      if (!status) return true
+      const friendships = [...u.sentFriendships, ...u.receivedFriendships]
+      return friendships.some((f: Friendship) => f.status === status)
     })
 
-    // Добавляем статус дружбы к каждому пользователю
-    const usersWithStatus = users.map(user => {
-      const friendship = friendships.find(
-        f => f.senderId === user.id || f.receiverId === user.id
+    // Форматируем ответ
+    const formattedUsers = filteredUsers.map((u: User & { sentFriendships: Friendship[], receivedFriendships: Friendship[] }) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      image: u.image,
+      role: u.role,
+      createdAt: u.createdAt
+    }))
+
+    // Сортируем результаты
+    const sortedUsers = formattedUsers.sort((user: User) => {
+      const friendships = [...users.find(u => u.id === user.id)?.sentFriendships || [], 
+                          ...users.find(u => u.id === user.id)?.receivedFriendships || []]
+      const friendship = friendships.find((f: Friendship) => 
+        f.senderId === session.user.id || f.receiverId === session.user.id
       )
-
-      let friendshipStatus: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' = 'NONE'
-
-      if (friendship) {
-        friendshipStatus = friendship.status as typeof friendshipStatus
-      }
-
-      return {
-        ...user,
-        friendshipStatus,
-      }
+      return friendship?.status === 'ACCEPTED' ? -1 : 1
     })
 
-    return NextResponse.json(usersWithStatus)
+    return NextResponse.json(sortedUsers)
   } catch (error) {
-    console.error('Search users error:', error)
-    return new NextResponse("Internal Server Error", { status: 500 })
+    console.error("[USERS_SEARCH]", error)
+    return NextResponse.json({ error: "Failed to search users" }, { status: 500 })
   }
 } 

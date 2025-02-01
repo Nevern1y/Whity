@@ -9,7 +9,7 @@ import { Clock, Users, Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { Level } from "@prisma/client"
+import { Level } from "@/types/prisma"
 
 interface Course {
   id: string

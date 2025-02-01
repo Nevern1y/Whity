@@ -1,14 +1,14 @@
-import { PrismaAdapter } from "@auth/prisma-adapter"
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { NextAuthOptions } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import CredentialsProvider from "next-auth/providers/credentials"
-import bcrypt from "bcryptjs"
+import { compare } from "bcryptjs"
 import { getServerSession } from "next-auth/next"
 import { UserRole } from "@/types/next-auth"
-import { Adapter } from "next-auth/adapters"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: PrismaAdapter(prisma),
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -29,28 +29,16 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
-          },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            password: true,
-            role: true
-          }
+          where: { email: credentials.email }
         })
 
-        if (!user) {
+        if (!user || !user.hashedPassword) {
           return null
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
+        const isValid = await compare(credentials.password, user.hashedPassword)
 
-        if (!isPasswordValid) {
+        if (!isValid) {
           return null
         }
 
@@ -58,26 +46,27 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
+          image: user.image,
+          role: user.role as UserRole
         }
       }
     })
   ],
   callbacks: {
-    async session({ token, session }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.name = token.name
-        session.user.email = token.email
-        session.user.role = token.role as UserRole
+    session: ({ session, token }) => {
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.sub,
+          role: token.role
+        },
       }
-
-      return session
     },
-    async jwt({ token, user }) {
+    jwt: ({ token, user }) => {
       if (user) {
-        token.id = user.id
         token.role = user.role
+        token.id = user.id
       }
       return token
     }

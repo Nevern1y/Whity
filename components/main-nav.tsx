@@ -4,6 +4,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Book, Newspaper, MessageSquare } from "lucide-react"
+import { useUserStore } from "@/lib/store/user-store"
+import { useSession } from "next-auth/react"
+import { useEffect } from "react"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 const navigation = [
   { name: "Курсы", href: "/courses", icon: Book },

@@ -1,7 +1,7 @@
-import { Server } from "socket.io"
+import { Server as SocketIOServer } from 'socket.io'
 
 declare global {
-  var io: Server | undefined
+  var io: SocketIOServer | undefined
 }
 
 export {} 

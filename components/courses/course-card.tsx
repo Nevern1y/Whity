@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
-import { Level } from "@prisma/client"
+import { Level } from "@/types/prisma"
 import { cn } from "@/lib/utils"
 
 interface CourseCardProps {

@@ -1,11 +1,30 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createNotification } from "@/lib/notifications"
 
+interface User {
+  id: string
+  name: string | null
+  image: string | null
+}
+
 export async function GET() {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return new NextResponse("Unauthorized", { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    })
+
+    if (user?.role !== "ADMIN") {
+      return new NextResponse("Forbidden", { status: 403 })
+    }
+
     const news = await prisma.news.findMany({
       include: {
         author: {
@@ -28,7 +47,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
@@ -53,9 +72,15 @@ export async function POST(req: Request) {
       },
     })
 
-    const users = await prisma.user.findMany()
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        image: true
+      }
+    })
     await Promise.all(
-      users.map(user => 
+      users.map((user: User) => 
         createNotification({
           userId: user.id,
           title: "Новая публикация",

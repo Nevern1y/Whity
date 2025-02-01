@@ -21,35 +21,33 @@ export default function RegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setIsLoading(true)
 
-    const formData = new FormData(event.currentTarget)
-    const data = {
-      name: formData.get("name"),
-      email: formData.get("email"),
-      password: formData.get("password"),
-    }
-
     try {
-      const response = await fetch("/api/register", {
+      const formData = new FormData(event.currentTarget)
+      const response = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.get("email"),
+          password: formData.get("password"),
+          name: formData.get("name"),
+        }),
       })
 
-      if (response.ok) {
-        toast.success("Регистрация успешна")
-        router.push("/login")
-      } else {
-        const error = await response.json()
-        toast.error(error.message || "Ошибка при регистрации")
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Ошибка при регистрации")
       }
+
+      toast.success(data.message || "Регистрация успешна!")
+      router.push("/login")
     } catch (error) {
-      toast.error("Произошла ошибка при регистрации")
+      console.error(error)
+      toast.error(error instanceof Error ? error.message : "Ошибка при регистрации")
     } finally {
       setIsLoading(false)
     }

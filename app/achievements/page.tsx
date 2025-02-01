@@ -1,6 +1,5 @@
 import { Metadata } from "next"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { ACHIEVEMENTS } from "@/lib/achievements"
@@ -8,6 +7,7 @@ import { AchievementCard } from "@/components/achievements/achievement-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, Clock, Flame } from "lucide-react"
 import { StatsCard } from "@/components/achievements/stats-card"
+import { auth } from "@/lib/auth"
 
 interface UserAchievement {
   id: string;
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 }
 
 export default async function AchievementsPage() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   if (!session) redirect("/login")
 
   const userAchievements = await prisma.userAchievement.findMany({

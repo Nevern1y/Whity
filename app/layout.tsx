@@ -5,6 +5,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Providers } from "@/components/providers"
 import { AchievementPopup } from "@/components/achievements/achievement-popup"
+import { useUserStore } from "@/lib/store/user-store"
+import { auth } from "@/lib/auth"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -13,11 +15,18 @@ export const metadata: Metadata = {
   description: "Образовательная платформа для специалистов агропромышленного комплекса",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await auth()
+  
+  // Инициализируем состояние аватара
+  if (session?.user?.image) {
+    useUserStore.getState().setUserImage(session.user.image)
+  }
+
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>

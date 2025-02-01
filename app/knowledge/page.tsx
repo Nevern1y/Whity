@@ -1,13 +1,12 @@
 import { Suspense } from "react"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { auth } from "@/lib/auth"
 import { ArticlesList } from "@/components/articles-list"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 
 export default async function KnowledgeBasePage() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   const isAdmin = session?.user?.role === "ADMIN"
 
   return (

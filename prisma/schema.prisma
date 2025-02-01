@@ -32,8 +32,8 @@ model User {
   userAchievements    UserAchievement[] @relation("UserAchievements")
   news                News[]            @relation("NewsAuthor")
   articles            Article[]         @relation("AuthoredArticles")
-  sentFriendships     Friendship[]      @relation("SentFriendRequests")
-  receivedFriendships Friendship[]      @relation("ReceivedFriendRequests")
+  sentFriendships     Friendship[]      @relation("SentFriendships")
+  receivedFriendships Friendship[]      @relation("ReceivedFriendships")
   lastActive          DateTime?
   preferences         Json?
   totalPoints         Int               @default(0)
@@ -45,15 +45,18 @@ model User {
   isOnline            Boolean           @default(false)
   courseProgress      CourseProgress[]
   lessonComments      LessonComment[]   @relation("UserComments")
-  courseRatings       CourseRating[]    @relation("UserRatings")
+  courseRatings       CourseRating[]    @relation("CourseRatings")
   enrolledCourses     Course[]          @relation("EnrolledCourses")
   twoFactorEnabled    Boolean           @default(false) @map("two_factor_enabled")
   sessionTimeout      Int               @default(30) @map("session_timeout")
   securityLogs        SecurityLog[]
   securitySettings    Json?             @default("{}")
   studySessions       StudySession[]
-  statistics          UserStatistics?   @relation("UserStatistics")
+  statistics          UserStatistics?
   settings            UserSettings?
+  studentsCount       Int               @default(0)
+  rating              Float             @default(0)
+  uploadedFiles       UploadedFile[]
 
   @@index([email])
   @@index([role])
@@ -92,6 +95,8 @@ model Course {
   courseRatings  CourseRating[]   @relation("CourseRatings")
   students       User[]           @relation("EnrolledCourses")
   studySessions  StudySession[]
+  studentsCount  Int              @default(0)
+  rating         Float            @default(0)
 
   @@index([authorId])
   @@index([published])
@@ -234,8 +239,8 @@ model Friendship {
   status     FriendshipStatus @default(PENDING)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
-  sender     User             @relation("SentFriendRequests", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User             @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User             @relation("SentFriendships", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User             @relation("ReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
   @@index([senderId])
@@ -382,7 +387,7 @@ model CourseRating {
   updatedAt DateTime @updatedAt
 
   course Course @relation("CourseRatings", fields: [courseId], references: [id], onDelete: Cascade)
-  user   User   @relation("UserRatings", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("CourseRatings", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, userId])
   @@index([userId])
@@ -404,16 +409,11 @@ model SecurityLog {
 }
 
 model UserStatistics {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation("UserStatistics", fields: [userId], references: [id], onDelete: Cascade)
-  totalTimeSpent Int      @default(0)
-  lastActiveAt   DateTime @default(now())
-  currentStreak  Int      @default(0)
-  longestStreak  Int      @default(0)
-  lastStreakDate DateTime @default(now())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id             String @id @default(cuid())
+  userId         String @unique
+  totalTimeSpent Int    @default(0)
+  currentStreak  Int    @default(0)
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -424,7 +424,7 @@ model StudySession {
   courseId  String
   startTime DateTime  @default(now())
   endTime   DateTime?
-  duration  Int? // в минутах
+  duration  Int?      // в минутах
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -436,14 +436,29 @@ model StudySession {
 }
 
 model UserSettings {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme         String   @default("system")
-  fontSize      String   @default("md")
-  animations    Boolean  @default(true)
-  notifications Json     @default("{}")
-  language      String   @default("ru")
-  timezone      String   @default("Europe/Moscow")
-  updatedAt     DateTime @updatedAt
+  id            String @id @default(cuid())
+  userId        String @unique
+  theme         String @default("system")
+  fontSize      String @default("md")
+  language      String @default("ru")
+  timezone      String @default("Europe/Moscow")
+  notifications Json   @default("{\"email\":true,\"push\":false,\"sounds\":true,\"updates\":true,\"newsletter\":false}")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UploadedFile {
+  id        String   @id @default(cuid())
+  fileName  String // Имя файла на диске
+  fileUrl   String // Публичный URL файла
+  fileType  String // MIME тип файла
+  fileSize  Int // Размер файла в байтах
+  userId    String // ID пользователя, загрузившего файл
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

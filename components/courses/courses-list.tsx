@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { CourseCard } from "@/components/courses/course-card"
 import { MobileCourseCard } from "./mobile-course-card"
-import { Level } from "@prisma/client"
+import { Level } from "@/types/prisma"
 import { toast } from "sonner"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -14,13 +14,25 @@ interface Course {
   image: string
   level: Level
   duration: string
+  author: {
+    id: string
+    name: string
+    image: string
+  }
   studentsCount: number
   rating: number
-  progress: number
+  _count: {
+    students: number
+  }
+  progress?: number
 }
 
-export function CoursesList() {
-  const [courses, setCourses] = useState<Course[]>([])
+interface CoursesListProps {
+  initialCourses: Course[]
+}
+
+export function CoursesList({ initialCourses }: CoursesListProps) {
+  const [courses, setCourses] = useState<Course[]>(initialCourses)
   const [loading, setLoading] = useState(true)
   const isMobile = useMediaQuery("(max-width: 768px)")
 

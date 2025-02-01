@@ -1,18 +1,17 @@
 import { prisma } from "@/lib/prisma"
-import { Prisma } from "@prisma/client"
-import { socketClient } from "@/lib/socket-client"
-import type { FullNotification } from "@/types/socket"
 
 type NotificationType = "course" | "achievement" | "message" | "news" | "system"
 
-type NotificationMetadata = Record<string, string | number | boolean | null>
+interface NotificationMetadata {
+  [key: string]: string | number | boolean | null
+}
 
 export interface Notification {
   id: string
   userId: string
   title: string
   message: string
-  type: NotificationType
+  type: string
   read: boolean
   link?: string | null
   metadata?: NotificationMetadata | null
@@ -41,19 +40,23 @@ export async function createNotification({
       message,
       type,
       link,
-      metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : null
+      metadata: metadata ? JSON.stringify(metadata) : null
     }
   })
 
-  // Отправляем через глобальный io для серверных уведомлений
   if (global.io) {
-    global.io.to(userId).emit('notification:new', {
-      ...notification,
-      read: false,
-      createdAt: new Date(),
-      userId
-    } as FullNotification)
+    global.io.to(userId).emit('notification:new', notification)
   }
 
   return notification
+}
+
+export async function markAsRead(notificationId: string, userId: string) {
+  return await prisma.notification.update({
+    where: {
+      id: notificationId,
+      userId
+    },
+    data: { read: true }
+  })
 } 

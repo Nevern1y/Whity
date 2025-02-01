@@ -1,6 +1,5 @@
 import { Metadata } from "next"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -67,7 +66,7 @@ async function getNotifications() {
 }
 
 export default async function NotificationsPage() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   if (!session) {
     redirect("/login")
   }

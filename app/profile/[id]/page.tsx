@@ -1,6 +1,5 @@
 import { Metadata } from "next"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { AddFriendButton } from "@/components/add-friend-button"
@@ -14,6 +13,9 @@ import { BookOpen, Trophy, Star, Users2, Calendar } from "lucide-react"
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Suspense } from "react"
+import { auth } from "@/lib/auth"
+import type { User, Activity, Achievement } from "@/types/prisma"
+import ProfileContent from './_components/profile-content'
 
 interface ProfilePageProps {
   params: {
@@ -68,7 +70,7 @@ async function getFriendshipStatus(userId: string, targetUserId: string): Promis
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
   const profileData = await getProfileData(params.id)
@@ -162,22 +164,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
         <TabsContent value="progress" className="space-y-6">
           <Suspense fallback={<div>Загрузка...</div>}>
-            {/* @ts-expect-error Async Server Component */}
-            <CourseProgressWrapper userId={params.id} />
+            <ProfileContent userId={params.id} tab="progress" />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="achievements">
           <Suspense fallback={<div>Загрузка...</div>}>
-            {/* @ts-expect-error Async Server Component */}
-            <UserAchievementsWrapper userId={params.id} />
+            <ProfileContent userId={params.id} tab="achievements" />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="activity">
           <Suspense fallback={<div>Загрузка...</div>}>
-            {/* @ts-expect-error Async Server Component */}
-            <ActivityFeedWrapper userId={params.id} />
+            <ProfileContent userId={params.id} tab="activity" />
           </Suspense>
         </TabsContent>
 

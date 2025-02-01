@@ -1,95 +1,79 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Level, Prisma } from "@prisma/client"
+import { Level } from "@/types/prisma"
 
-export async function GET(request: Request) {
+interface CourseData {
+  title: string
+  description: string
+  image?: string
+  level: Level
+  duration: number
+  published?: boolean
+}
+
+interface CourseWithAuthor {
+  id: string
+  title: string
+  description: string
+  image: string | null
+  level: string
+  duration: number
+  published: boolean
+  authorId: string
+  author: {
+    name: string | null
+    image: string | null
+  }
+}
+
+export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 })
-    }
-
-    const { searchParams } = new URL(request.url)
-    const search = searchParams.get('search')
-    const level = searchParams.get('level') as Level | null
-
     const courses = await prisma.course.findMany({
-      where: {
-        published: true,
-        ...(level && { level }),
-        ...(search && {
-          OR: [
-            { title: { contains: search } },
-            { description: { contains: search } }
-          ]
-        }),
-      },
       include: {
-        progress: {
-          where: {
-            userId: session.user.id
-          },
+        author: {
           select: {
-            completed: true
+            name: true,
+            image: true
           }
-        },
-        _count: true
-      },
-      orderBy: {
-        createdAt: 'desc'
+        }
       }
     })
 
-    // Преобразуем данные для фронтенда
-    const formattedCourses = courses.map(course => ({
-      id: course.id,
-      title: course.title,
-      description: course.description,
-      image: course.image || '',
-      level: course.level,
-      duration: course.duration,
-      usersCount: course._count.progress,
-      progress: course.progress[0]?.completed || 0
-    }))
-
-    return NextResponse.json(formattedCourses)
+    return NextResponse.json(courses)
   } catch (error) {
-    console.error("[COURSES_GET]", error)
-    return new NextResponse("Internal Error", { status: 500 })
+    return NextResponse.json({ error: "Failed to fetch courses" }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
     const session = await auth()
-    if (!session?.user?.email || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const data = await request.json()
+    const data = await request.json() as CourseData
+    
     const course = await prisma.course.create({
       data: {
-        title: data.title,
-        description: data.description,
-        image: data.image,
-        level: data.level as Level,
-        duration: data.duration,
-        published: data.published || false,
-        authorId: session.user.id
+        ...data,
+        authorId: session.user.id,
+        published: data.published ?? false
+      },
+      include: {
+        author: {
+          select: {
+            name: true,
+            image: true
+          }
+        }
       }
-    })
+    }) as CourseWithAuthor
 
-    return NextResponse.json(course, { status: 201 })
+    return NextResponse.json(course)
   } catch (error) {
-    console.error("Error creating course:", error)
-    return NextResponse.json(
-      { error: "Failed to create course" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to create course" }, { status: 500 })
   }
 }
 

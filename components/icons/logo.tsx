@@ -1,4 +1,6 @@
-export function Logo() {
+type SVGProps = JSX.IntrinsicElements['svg']
+
+export function Logo(props: SVGProps) {
   return (
     <svg
       width="32"
@@ -23,6 +25,7 @@ export function Logo() {
         strokeLinejoin="round"
       />
       <circle
+        type="circle"
         cx="16"
         cy="16"
         r="2"

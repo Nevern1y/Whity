@@ -5,14 +5,13 @@ import { Badge } from "@/components/ui/badge"
 import { Clock, Users, Star } from "lucide-react"
 import Image from "next/image"
 import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { auth } from "@/lib/auth"
 import { notFound } from "next/navigation"
-import { Course as PrismaCourse, Lesson as PrismaLesson } from "@prisma/client"
+import type { Course, Lesson } from "@/types/prisma"
 
-type CourseWithRelations = PrismaCourse & {
+type CourseWithRelations = Course & {
   author: { id: string; name: string }
-  lessons: PrismaLesson[]
+  lessons: Lesson[]
   students: { id: string }[]
 }
 
@@ -36,7 +35,7 @@ async function getDetailedCourse(id: string): Promise<CourseWithRelations> {
 
 export default async function CoursePage({ params }: { params: { id: string } }) {
   const course = await getDetailedCourse(params.id)
-  const session = await getServerSession(authOptions)
+  const session = await auth()
 
   const isEnrolled = session && course.author.id === session.user?.id
 
@@ -83,7 +82,7 @@ export default async function CoursePage({ params }: { params: { id: string } })
       </Card>
       <h2 className="text-2xl font-bold mt-10 mb-6">Содержание курса</h2>
       <div className="space-y-4">
-        {course.lessons.map((lesson: PrismaLesson, index: number) => (
+        {course.lessons.map((lesson: Lesson, index: number) => (
           <Card key={lesson.id}>
             <CardContent className="p-4">
               <h3 className="text-lg font-semibold">

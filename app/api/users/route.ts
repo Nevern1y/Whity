@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+
+interface User {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+  sentFriendships: { status: string }[]
+  receivedFriendships: { status: string }[]
+}
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
@@ -41,7 +49,7 @@ export async function GET() {
     })
 
     // Преобразуем данные, добавляя статус дружбы
-    const usersWithFriendshipStatus = users.map(user => {
+    const usersWithFriendshipStatus = users.map((user: User) => {
       const sentFriendship = user.sentFriendships[0]
       const receivedFriendship = user.receivedFriendships[0]
       const friendshipStatus = (sentFriendship?.status || receivedFriendship?.status || 'NONE') as 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SELF'

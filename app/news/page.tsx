@@ -4,8 +4,7 @@ import { formatDate } from "@/lib/utils"
 import { Plus } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 // Обновляем интерфейс в соответствии с моделью из базы данных
@@ -49,7 +48,7 @@ async function isAdmin(userId: string) {
 }
 
 export default async function NewsPage() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   const news = await getNews()
   const userIsAdmin = session?.user?.id ? await isAdmin(session.user.id) : false
 
@@ -68,7 +67,7 @@ export default async function NewsPage() {
       </div>
 
       <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {news.map((item) => (
+        {news.map((item: News) => (
           <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
             <div className="relative h-40 md:h-48">
               <Image

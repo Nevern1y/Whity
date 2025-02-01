@@ -1,102 +1,86 @@
-import { io } from "socket.io-client"
-import { toast } from "sonner"
-import { socketConfig } from "@/lib/socket-config"
+import { io, Socket } from "socket.io-client"
 import type { 
   ClientSocketType,
   ServerToClientEvents,
-  ClientToServerEvents,
-  SocketCallback
+  ClientToServerEvents
 } from "@/types/socket"
+import { socketConfig } from "./socket-config"
 
 class SocketClient {
-  private static socket: ClientSocketType | null = null
-  private static reconnectAttempts = 0
-  private static maxReconnectAttempts = 5
+  private static instance: SocketClient
+  private socket: Socket | null = null
 
-  static initialize() {
-    if (!this.socket && typeof window !== 'undefined') {
-      const socketUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-      
-      this.socket = io(socketUrl, socketConfig) as ClientSocketType
+  private constructor() {
+    const SOCKET_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    
+    this.socket = io(SOCKET_URL, socketConfig)
 
-      this.setupListeners()
-    }
-    return this.socket
+    this.setupListeners()
   }
 
-  private static setupListeners() {
+  private setupListeners() {
     if (!this.socket) return
 
-    this.socket.on('connect', () => {
-      console.log('Socket connected successfully')
-      this.reconnectAttempts = 0
+    this.socket.on("connect", () => {
+      console.log("Socket connected:", this.socket?.id)
     })
 
-    this.socket.on('connect_error', (error: Error) => {
-      console.warn('Socket connection error:', error)
-      this.reconnectAttempts++
-      
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error('Max reconnection attempts reached')
-        this.socket?.close()
-      }
+    this.socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message)
     })
 
-    this.socket.on('disconnect', (reason: string) => {
-      console.log('Socket disconnected:', reason)
-      if (reason === 'io server disconnect') {
+    this.socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason)
+      if (reason === "io server disconnect") {
         this.socket?.connect()
       }
     })
 
-    this.socket.on('error', (error: Error) => {
-      console.error('Socket error:', error)
+    this.socket.on("error", (error) => {
+      console.error("Socket error:", error)
     })
   }
 
-  static getSocket() {
-    if (!this.socket) {
-      this.initialize()
+  public static getInstance(): SocketClient {
+    if (!SocketClient.instance) {
+      SocketClient.instance = new SocketClient()
     }
+    return SocketClient.instance
+  }
+
+  public getSocket() {
     return this.socket
   }
 
-  static disconnect() {
-    if (this.socket) {
-      this.socket.disconnect()
-      this.socket = null
-    }
+  public connect() {
+    this.socket?.connect()
   }
 
-  static on<T extends keyof ServerToClientEvents>(
+  public disconnect() {
+    this.socket?.disconnect()
+  }
+
+  public on<T extends keyof ServerToClientEvents>(
     event: T,
-    callback: SocketCallback<T>
+    callback: (data: Parameters<ServerToClientEvents[T]>[0]) => void
   ) {
-    const socket = this.getSocket()
-    if (socket) {
-      socket.on(event, callback as any) // type assertion необходим из-за ограничений Socket.IO
-    }
+    this.socket?.on(event, callback as any)
   }
 
-  static off<T extends keyof ServerToClientEvents>(
+  public off<T extends keyof ServerToClientEvents>(
     event: T,
-    callback: SocketCallback<T>
+    callback: (data: Parameters<ServerToClientEvents[T]>[0]) => void
   ) {
-    const socket = this.getSocket()
-    if (socket) {
-      socket.off(event, callback as any)
-    }
+    this.socket?.off(event, callback as any)
   }
 
-  static emit<T extends keyof ClientToServerEvents>(
+  public emit<T extends keyof ClientToServerEvents>(
     event: T,
     ...args: Parameters<ClientToServerEvents[T]>
-  ): boolean {
-    const socket = this.getSocket()
-    if (!socket?.connected) return false
-
+  ) {
+    if (!this.socket?.connected) return false
     try {
-      socket.emit(event, ...args)
+      this.socket.emit(event, ...args)
       return true
     } catch (error) {
       console.error('Error emitting event:', error)
@@ -105,4 +89,5 @@ class SocketClient {
   }
 }
 
-export const socketClient = SocketClient 
+const socketClient = SocketClient.getInstance()
+export { socketClient } 

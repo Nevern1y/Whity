@@ -30,6 +30,11 @@ import { useSession } from 'next-auth/react'
 import type { SessionInfo } from '@/types/session'
 import { DecorativeBackground } from "@/components/ui/decorative-background"
 import { EnhancedCard } from "@/components/ui/enhanced-card"
+import { AvatarUpload } from "@/components/profile/avatar-upload"
+import { useUserStore } from "@/lib/store/user-store"
+import { useRouter } from "next/navigation"
+import { ImageCropDialog } from "@/components/image-crop-dialog"
+import { toast } from "sonner"
 
 interface UserSettings {
   profile: {
@@ -39,6 +44,7 @@ interface UserSettings {
     company: string
     language: string
     timezone: string
+    image?: string | null
   }
   appearance: {
     theme: 'light' | 'dark' | 'system'
@@ -72,7 +78,8 @@ const defaultSettings: UserSettings = {
     phone: "",
     company: "",
     language: "ru",
-    timezone: "Europe/Moscow"
+    timezone: "Europe/Moscow",
+    image: null
   },
   appearance: {
     theme: 'system',
@@ -95,7 +102,7 @@ const defaultSettings: UserSettings = {
 }
 
 export default function SettingsPage() {
-  const { data: sessionData } = useSession()
+  const { data: sessionData, update } = useSession()
   const settings = useSettings()
   const { theme, setTheme } = useTheme()
   const { toast } = useToast()
@@ -103,6 +110,10 @@ export default function SettingsPage() {
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("profile")
   const [showPassword, setShowPassword] = useState(false)
+  const router = useRouter()
+  const setUserImage = useUserStore((state) => state.setUserImage)
+  const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
   
   // Используем значения по умолчанию
   const [userSettings, setUserSettings] = useState<UserSettings>(defaultSettings)
@@ -229,37 +240,71 @@ export default function SettingsPage() {
     }))
   }
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Ошибка",
-          description: "Размер файла не должен превышать 5MB",
-          variant: "destructive",
-        })
-        return
-      }
-      try {
-        setIsLoading(true)
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          setProfileImage(reader.result as string)
-          toast({
-            title: "Фото загружено",
-            description: "Изображение профиля обновлено"
-          })
-        }
-        reader.readAsDataURL(file)
-      } catch (error) {
-        toast({
-          title: "Ошибка",
-          description: "Не удалось загрузить изображение",
-          variant: "destructive"
-        })
-      } finally {
-        setIsLoading(false)
-      }
+  const handleImageSelect = (imageUrl: string) => {
+    setSelectedImage(imageUrl)
+    setCropDialogOpen(true)
+  }
+
+  const handleImageChange = async (url: string) => {
+    try {
+      setIsLoading(true)
+      
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: url })
+      })
+
+      if (!response.ok) throw new Error('Failed to update profile')
+
+      setUserImage(url)
+      await update({ image: url })
+      
+      router.refresh()
+      toast({
+        title: "Успех",
+        description: "Фото профиля обновлено"
+      })
+      setCropDialogOpen(false)
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить фото профиля",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      setIsLoading(true)
+
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userSettings.profile)
+      })
+
+      if (!response.ok) throw new Error('Failed to update profile')
+
+      await update(userSettings.profile)
+      router.refresh()
+      
+      toast({
+        title: "Успех",
+        description: "Профиль успешно обновлен"
+      })
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить профиль",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -347,61 +392,11 @@ export default function SettingsPage() {
               >
                 <CardContent className="space-y-6">
                   {/* Фото профиля */}
-                  <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                    <div className="relative group">
-                      <Avatar className="h-24 w-24 ring-2 ring-offset-2 ring-offset-background ring-primary/20">
-                        <AvatarImage src={profileImage || ""} />
-                        <AvatarFallback>
-                          {userSettings.profile.name 
-                            ? userSettings.profile.name.charAt(0).toUpperCase()
-                            : "U"
-                          }
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Label htmlFor="picture" className="cursor-pointer text-white text-xs">
-                          Изменить
-                        </Label>
-                        <Input
-                          id="picture"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImageUpload}
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="gap-2"
-                          disabled={isLoading}
-                        >
-                          <Camera className="h-4 w-4" />
-                          <Label htmlFor="picture" className="cursor-pointer">
-                            Загрузить фото
-                          </Label>
-                        </Button>
-                        {profileImage && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="gap-2 text-destructive hover:text-destructive"
-                            onClick={() => setProfileImage(null)}
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Удалить
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Рекомендуемый размер: 200x200px. Максимальный размер: 5MB.
-                      </p>
-                    </div>
+                  <div className="flex justify-center">
+                    <AvatarUpload
+                      initialImage={sessionData?.user?.image}
+                      onImageChange={handleImageSelect}
+                    />
                   </div>
 
                   <Separator />
@@ -510,7 +505,7 @@ export default function SettingsPage() {
               {/* Кнопка сохранения */}
               <div className="flex justify-end">
                 <Button
-                  onClick={handleSave}
+                  onClick={handleSubmit}
                   disabled={isLoading}
                   className="relative overflow-hidden group"
                 >
@@ -858,6 +853,14 @@ export default function SettingsPage() {
           </motion.div>
         </Tabs>
       </motion.div>
+
+      {/* Диалог для кропа изображения */}
+      <ImageCropDialog
+        isOpen={cropDialogOpen}
+        onClose={() => setCropDialogOpen(false)}
+        imageSrc={selectedImage || ''}
+        onCropComplete={handleImageChange}
+      />
     </>
   )
 }

@@ -6,33 +6,29 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: 'localhost',
-      },
+      }
     ],
   },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        dns: false,
-      }
-    }
-    config.externals.push({
-      'utf-8-validate': 'commonjs utf-8-validate',
-      'bufferutil': 'commonjs bufferutil',
-      'supports-color': 'commonjs supports-color',
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.(png|jpg|gif|jpeg|svg)$/i,
+      type: 'asset/resource'
     })
     return config
   },
-  experimental: {
-    serverActions: {
-      allowedOrigins: ['localhost:3000'],
-      bodySizeLimit: '2mb'
-    }
-  },
-  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  async headers() {
+    return [
+      {
+        source: '/uploads/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ]
+  }
 }
 
 module.exports = nextConfig 

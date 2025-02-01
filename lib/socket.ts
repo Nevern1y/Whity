@@ -42,7 +42,8 @@ class SocketClient {
         connected: true,
         messageQueue: [],
         pendingMessages: new Set(),
-        lastPing: Date.now()
+        lastPing: Date.now(),
+        status: 'connected'
       }
     })
 

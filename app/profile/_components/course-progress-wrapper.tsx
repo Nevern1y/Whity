@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma"
 import { CourseProgress as ProgressComponent } from "@/components/course-progress"
-import { Course, CourseProgress } from "@prisma/client"
+import type { Course } from "@/types/prisma"
+
+interface CourseProgress {
+  progress: number
+  totalTimeSpent: number
+  lastAccessedAt: Date
+}
 
 interface CourseWithProgress {
   id: string

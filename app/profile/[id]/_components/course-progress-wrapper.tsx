@@ -1,8 +1,21 @@
 import { prisma } from "@/lib/prisma"
-import { CourseProgress as ProgressComponent } from "@/components/course-progress"
-import { Course, CourseProgress } from "@prisma/client"
+import { CourseProgress } from "@/components/course-progress"
+
+interface CourseProgressWrapperProps {
+  userId: string
+}
 
 interface CourseWithProgress {
+  id: string
+  title: string
+  courseProgress: Array<{
+    progress: number
+    totalTimeSpent: number
+    lastAccessedAt: Date
+  }>
+}
+
+interface FormattedCourse {
   id: string
   title: string
   progress: Array<{
@@ -12,7 +25,7 @@ interface CourseWithProgress {
   }>
 }
 
-export default async function CourseProgressWrapper({ userId }: { userId: string }) {
+export default async function CourseProgressWrapper({ userId }: CourseProgressWrapperProps) {
   const enrolledCourses = await prisma.course.findMany({
     where: {
       courseProgress: {
@@ -26,17 +39,17 @@ export default async function CourseProgressWrapper({ userId }: { userId: string
         where: { userId }
       }
     }
-  })
+  }) as CourseWithProgress[]
 
-  const courses: CourseWithProgress[] = enrolledCourses.map((course: Course & { courseProgress: CourseProgress[] }) => ({
+  const courses = enrolledCourses.map((course: CourseWithProgress): FormattedCourse => ({
     id: course.id,
     title: course.title,
-    progress: course.courseProgress.map((p: CourseProgress) => ({
+    progress: course.courseProgress.map((p) => ({
       completed: p.progress,
       totalTimeSpent: p.totalTimeSpent,
       updatedAt: p.lastAccessedAt
     }))
   }))
 
-  return <ProgressComponent courses={courses} />
+  return <CourseProgress courses={courses} />
 } 

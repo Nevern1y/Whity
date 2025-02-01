@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma"
 import { ActivityFeed } from "@/components/activity-feed"
 
-export default async function ActivityFeedWrapper({ userId }: { userId: string }) {
+interface ActivityFeedWrapperProps {
+  userId: string
+}
+
+export default async function ActivityFeedWrapper({ userId }: ActivityFeedWrapperProps) {
   const activities = await prisma.activity.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },

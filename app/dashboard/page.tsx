@@ -2,9 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { CourseCard } from "@/components/course-card"
 import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { Course } from "@prisma/client"
+import { auth } from "@/lib/auth"
+import type { Course } from "@/types/prisma"
 
 interface CourseWithProgress {
   id: string;
@@ -13,6 +12,11 @@ interface CourseWithProgress {
   level: string;
   duration: number;
   progress?: number;
+}
+
+interface CourseProgress {
+  courseId: string
+  totalTimeSpent: number
 }
 
 async function getUserCourses(email: string | null | undefined): Promise<CourseWithProgress[]> {
@@ -29,18 +33,18 @@ async function getUserCourses(email: string | null | undefined): Promise<CourseW
 
   if (!user) return []
 
-  return user.authoredCourses.map((course) => ({
+  return user.authoredCourses.map((course: Course) => ({
     id: course.id,
     title: course.title,
     description: course.description,
     level: course.level,
     duration: Number(course.duration),
-    progress: user.courseProgress?.find(p => p.courseId === course.id)?.totalTimeSpent || 0
+    progress: user.courseProgress?.find((p: CourseProgress) => p.courseId === course.id)?.totalTimeSpent || 0
   }))
 }
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
 
   if (!session) {
     return (

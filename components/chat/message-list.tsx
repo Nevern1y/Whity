@@ -88,21 +88,19 @@ export function MessageList({ selectedUser }: MessageListProps) {
     const socket = socketClient.getSocket()
     if (!socket) return
 
-    socket.emit('join_chat', selectedUser.id)
+    socketClient.emit('join_chat', selectedUser.id)
     
     const handleNewMessage = (message: ChatMessage) => {
-      if (message.senderId === selectedUser.id || message.senderId === session?.user?.id) {
-        setMessages(prev => [...prev, message])
-      }
+      setMessages(prev => [...prev, message])
     }
 
     socketClient.on('new_message', handleNewMessage)
 
     return () => {
-      socket.emit('leave_chat', selectedUser.id)
+      socketClient.emit('leave_chat', selectedUser.id)
       socketClient.off('new_message', handleNewMessage)
     }
-  }, [selectedUser.id, session?.user?.id])
+  }, [selectedUser.id])
 
   // Заменяем polling на сокеты
   useEffect(() => {
