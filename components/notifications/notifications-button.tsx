@@ -1,117 +1,150 @@
 "use client"
 
-import * as React from "react"
-import { Bell } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
+import { Bell, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useNotifications } from "./notifications-context"
+import { useState } from "react"
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { NotificationsList } from "../notifications-list"
-import { useNotifications } from "./notifications-context"
-
-const TriggerButton = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->((props, ref) => {
-  const { unreadCount } = useNotifications()
-  
-  return (
-    <div
-      ref={ref}
-      role="button"
-      tabIndex={0}
-      {...props}
-      className={cn(
-        "relative inline-flex items-center justify-center",
-        "h-10 w-10 rounded-md",
-        "bg-transparent hover:bg-accent",
-        "text-sm font-medium",
-        "transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2",
-        "focus-visible:ring-ring focus-visible:ring-offset-2"
-      )}
-    >
-      <Bell className="h-5 w-5" />
-      {unreadCount > 0 && (
-        <Badge 
-          variant="secondary" 
-          className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center"
-        >
-          {unreadCount}
-        </Badge>
-      )}
-    </div>
-  )
-})
-TriggerButton.displayName = "TriggerButton"
+import { NotificationsList } from "./notifications-list"
+import { Badge } from "@/components/ui/badge"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { cn } from "@/lib/utils"
+import { motion, AnimatePresence } from "framer-motion"
 
 export function NotificationsButton() {
-  const { unreadCount, markAllAsRead, loading } = useNotifications()
+  const { unreadCount, markAllAsRead } = useNotifications()
+  const [open, setOpen] = useState(false)
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <TriggerButton aria-label="Уведомления" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className={cn(
+            "relative hover:bg-accent hover:text-accent-foreground",
+            "focus-visible:ring-1 focus-visible:ring-ring",
+            "transition-all duration-200 ease-in-out",
+            "active:scale-95"
+          )}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key="bell"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Bell className="h-5 w-5" />
+            </motion.div>
+          </AnimatePresence>
+          
+          <AnimatePresence>
+            {unreadCount > 0 && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                className="absolute -top-1 -right-1"
+              >
+                <Badge 
+                  variant="destructive" 
+                  className={cn(
+                    "h-5 w-5 rounded-full p-0",
+                    "flex items-center justify-center",
+                    "shadow-md",
+                    "animate-pulse"
+                  )}
+                >
+                  <span className="text-[10px] font-semibold">{unreadCount}</span>
+                </Badge>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Button>
       </SheetTrigger>
       
       <SheetContent 
-        side="right" 
-        className="w-full p-0 sm:max-w-lg safe-top safe-bottom"
+        side={isMobile ? "bottom" : "right"}
+        className={cn(
+          isMobile 
+            ? "h-[90vh] rounded-t-[var(--radius)] p-0"
+            : "w-[400px]",
+          "bg-gradient-to-b from-background to-muted/30",
+          "backdrop-blur-[var(--blur-sm)]",
+          "transition-transform duration-300 ease-in-out"
+        )}
       >
-        <div className="flex h-full flex-col">
-          <SheetHeader className="px-4 py-3 border-b">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                <span>Уведомления</span>
-                {unreadCount > 0 && (
-                  <Badge variant="secondary">{unreadCount}</Badge>
-                )}
-              </SheetTitle>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={markAllAsRead}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
+        <SheetHeader className={cn(
+          "px-4 py-3 border-b sticky top-0 z-10",
+          "bg-background/95 backdrop-blur-[var(--blur-sm)]",
+          "shadow-sm",
+          isMobile && "mb-2"
+        )}>
+          <div className="flex items-center justify-between">
+            <SheetTitle className={cn(
+              "gradient-text font-semibold",
+              isMobile && "text-lg"
+            )}>
+              Уведомления
+            </SheetTitle>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size={isMobile ? "sm" : "default"}
+                  className={cn(
+                    "text-muted-foreground hover:text-primary",
+                    "transition-colors duration-200",
+                    isMobile && "text-sm py-1 h-8"
+                  )}
+                  onClick={() => {
                     markAllAsRead()
-                  }
-                }}
-                className={cn(
-                  "inline-flex items-center justify-center",
-                  "rounded-md px-3 py-1 text-sm",
-                  "bg-secondary hover:bg-secondary/80",
-                  "transition-colors",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "focus-visible:outline-none focus-visible:ring-2",
-                  "focus-visible:ring-ring focus-visible:ring-offset-2"
-                )}
-                aria-disabled={unreadCount === 0 || loading}
-              >
-                Прочитать все
-              </div>
-            </div>
-          </SheetHeader>
-
-          <ScrollArea className="flex-1">
-            <div className="p-4">
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                </div>
-              ) : (
-                <NotificationsList />
+                  }}
+                >
+                  Прочитать все
+                </Button>
               )}
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className={cn(
+                  "rounded-full",
+                  "hover:bg-destructive/10 hover:text-destructive",
+                  "transition-colors duration-200",
+                  "active:scale-95",
+                  isMobile && "h-8 w-8"
+                )}
+                onClick={() => setOpen(false)}
+              >
+                <X className={cn("h-4 w-4", isMobile && "h-3 w-3")} />
+                <span className="sr-only">Закрыть</span>
+              </Button>
             </div>
-          </ScrollArea>
-        </div>
+          </div>
+        </SheetHeader>
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className={cn(
+            "overflow-y-auto px-4",
+            isMobile ? "h-[calc(90vh-4rem)]" : "h-[calc(100vh-4rem)]",
+            "scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+          )}
+        >
+          <NotificationsList />
+        </motion.div>
       </SheetContent>
     </Sheet>
   )

@@ -1,142 +1,142 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Facebook, Twitter, Instagram, Youtube } from "lucide-react"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { Logo } from "@/components/logo"
+import { Button } from "@/components/ui/button"
+import { Facebook, Instagram, Linkedin, Twitter } from "lucide-react"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
-interface FooterProps {
-  className?: string
-  email?: string | null
+const footerLinks = [
+  {
+    title: "О нас",
+    links: [
+      { label: "О компании", href: "/about" },
+      { label: "Контакты", href: "/contacts" },
+      { label: "Карьера", href: "/careers" },
+    ],
+  },
+  {
+    title: "Обучение",
+    links: [
+      { label: "Все курсы", href: "/courses" },
+      { label: "Преподаватели", href: "/teachers" },
+      { label: "Расписание", href: "/schedule" },
+    ],
+  },
+  {
+    title: "Поддержка",
+    links: [
+      { label: "FAQ", href: "/faq" },
+      { label: "Помощь", href: "/help" },
+      { label: "Документация", href: "/docs" },
+    ],
+  },
+]
+
+const socialLinks = [
+  { icon: Facebook, href: "#", label: "Facebook" },
+  { icon: Instagram, href: "#", label: "Instagram" },
+  { icon: Twitter, href: "#", label: "Twitter" },
+  { icon: Linkedin, href: "#", label: "LinkedIn" },
+]
+
+// Создаем новый компонент для социальных иконок
+function SocialIcon({ icon: Icon, href, label }: typeof socialLinks[0]) {
+  return (
+    <Link 
+      href={href} 
+      aria-label={label}
+      className="text-muted-foreground hover:text-primary 
+                transition-colors active:scale-95"
+    >
+      <Icon className="h-5 w-5" />
+    </Link>
+  )
 }
 
-export function Footer({ className, email }: FooterProps) {
-  const pathname = usePathname()
-  const emailHref = email ? `mailto:${email}` : undefined
-  
-  // Исключаем футер только на специфических страницах
-  const excludedPaths = ['/login', '/register', '/auth/signin', '/auth/error']
-  if (excludedPaths.includes(pathname)) return null
+export function Footer() {
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   return (
-    <footer className={cn("w-full bg-background border-t mt-auto", className)}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Desktop Version */}
+      <div className="hidden md:block container px-4 py-12">
+        <div className="hidden md:grid md:grid-cols-4 gap-8 pb-8">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">О компании</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/about" className="text-muted-foreground hover:text-foreground transition-colors">
-                  О нас
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Контакты
-                </Link>
-              </li>
-              <li>
-                <Link href="/careers" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Карьера
-                </Link>
-              </li>
-            </ul>
-          </div>
-          
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Обучение</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/courses" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Все курсы
-                </Link>
-              </li>
-              <li>
-                <Link href="/articles" className="text-muted-foreground hover:text-foreground transition-colors">
-                  База знаний
-                </Link>
-              </li>
-              <li>
-                <Link href="/forum" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Форум
-                </Link>
-              </li>
-            </ul>
-          </div>
-          
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Поддержка</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/faq" className="text-muted-foreground hover:text-foreground transition-colors">
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <Link href="/support" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Техподдержка
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Условия использования
-                </Link>
-              </li>
-            </ul>
-          </div>
-          
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Мы в соцсетях</h3>
-            <div className="flex space-x-4">
-              <a 
-                href="https://facebook.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Facebook className="h-6 w-6" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                <Twitter className="h-6 w-6" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                <Instagram className="h-6 w-6" />
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                <Youtube className="h-6 w-6" />
-              </a>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-12 pt-8 border-t">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-muted-foreground">
-              &copy; {new Date().getFullYear()} АО "АЛЛЕЛЬ АГРО". Все права защищены.
+            <Logo />
+            <p className="text-sm text-muted-foreground">
+              Образовательная платформа для специалистов агропромышленности
             </p>
-            <div className="flex space-x-4">
-              <a 
-                href="https://facebook.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Facebook className="h-6 w-6" />
-              </a>
+          </div>
+          {footerLinks.map((group) => (
+            <div key={group.title}>
+              <h4 className="font-semibold mb-4">{group.title}</h4>
+              <ul className="space-y-3">
+                {group.links.map((link) => (
+                  <li key={link.href}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile Version */}
+      <div className="md:hidden px-6 py-8">
+        {/* Лого и описание */}
+        <div className="mb-8 text-center">
+          <Logo className="text-xl mb-2" />
+          <p className="text-xs text-muted-foreground">
+            Образовательная платформа для специалистов агропромышленности
+          </p>
+        </div>
+
+        {/* Ссылки в столбик */}
+        <div className="space-y-6">
+          {footerLinks.map((group) => (
+            <div key={group.title}>
+              <h4 className="text-sm font-semibold mb-3">
+                {group.title}
+              </h4>
+              <ul className="space-y-2.5">
+                {group.links.map((link) => (
+                  <li key={link.href}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-muted-foreground/80 hover:text-primary
+                               transition-colors flex items-center gap-2"
+                    >
+                      <div className="h-1 w-1 rounded-full bg-primary/50" />
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* Социальные сети */}
+        <div className="mt-8 pt-6 border-t">
+          <div className="flex items-center justify-center gap-4">
+            {socialLinks.map((social) => (
+              <SocialIcon key={social.label} {...social} />
+            ))}
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
-          <p className="text-center text-sm leading-loose md:text-left">
-            Built by{" "}
-            <a
-              href={emailHref}
-              className="font-medium underline underline-offset-4"
-              {...(!emailHref && { onClick: (e) => e.preventDefault() })}
-            >
-              {email || 'support@example.com'}
-            </a>
+        {/* Copyright */}
+        <div className="mt-6 pt-6 border-t text-center">
+          <p className="text-xs text-muted-foreground">
+            © 2024 АЛЛЕЛЬ АГРО. Все права защищены.
           </p>
         </div>
       </div>

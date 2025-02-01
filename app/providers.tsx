@@ -2,8 +2,9 @@
 
 import { ThemeProvider } from "next-themes"
 import { SessionProvider } from "next-auth/react"
+import { Toaster } from "@/components/ui/toaster"
+import { Toaster as Sonner } from "sonner"
 import { NotificationsProvider } from "@/components/notifications/notifications-context"
-import { Toaster } from "sonner"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,8 +16,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         disableTransitionOnChange
       >
         <NotificationsProvider>
-          <Toaster richColors position="top-right" />
           {children}
+          <Toaster />
+          <Sonner />
         </NotificationsProvider>
       </ThemeProvider>
     </SessionProvider>

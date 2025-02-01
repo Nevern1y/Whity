@@ -2,87 +2,169 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    /* Светлая тема */
+    --background: 0 0% 100%;    /* Чистый белый фон */
+    --foreground: 240 10% 3.9%;
+    
+    --card: 0 0% 98%;          /* Слегка серый для карточек */
+    --card-foreground: 240 10% 3.9%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-  --primary: 142.1 76.2% 36.3%;
-  --primary-foreground: 355.7 100% 97.3%;
-
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
+    --popover-foreground: 240 10% 3.9%;
+    
+    /* Зеленый для акцентов */
+    --primary: 142 72% 29%;     /* Приятный зеленый */
+    --primary-foreground: 0 0% 100%;
+    
+    /* Нейтральные цвета */
+    --secondary: 240 4.8% 95.9%;  /* Светло-серый */
+    --secondary-foreground: 240 5.9% 10%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
+    --accent: 142 72% 95%;      /* Очень светлый зеленый для акцентов */
+    --accent-foreground: 142 72% 29%;
+    
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 142 72% 29%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-  --ring: 142.1 76.2% 36.3%;
+    --radius: 0.75rem;
 
-    --radius: 0.5rem;
+    /* Новые, более мягкие цвета для светлой темы с сиреневым оттенком */
+    --background: 252 30% 98%;
+    --card: 252 30% 99%;
+    --popover: 252 30% 99%;
+    --secondary: 252 20% 94%;
+    --muted: 252 20% 96%;
+    --accent: 252 20% 94%;
+    --border: 252 20% 90%;
 
-  --navbar-height: 3.5rem;
+    /* Обновляем тени для лучшей видимости */
+    --shadow-color: 220 40% 2%;
+    --shadow-strength: 2%;
+    --shadow-sm: 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+    --shadow-md: 0 3px 5px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
+    --shadow-lg: 0 5px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 2%));
 
-  --primary-rgb: 34 197 94;
+    /* Улучшенные эффекты */
+    --card-glow: 0 0 0 1px rgba(0, 0, 0, 0.03),
+                0 2px 4px rgba(0, 0, 0, 0.04),
+                0 4px 8px rgba(0, 0, 0, 0.02);
+   
+    --header-blur: blur(8px);
+    --header-bg: rgba(255, 255, 255, 0.7);
+   
+    /* Градиенты */
+    --gradient-subtle: linear-gradient(
+      to bottom right,
+      hsl(150 50% 35% / 0.1),
+      hsl(150 50% 35% / 0.05)
+    );
+   
+    --gradient-card: linear-gradient(
+      to bottom right,
+      hsl(var(--card)),
+      hsl(var(--background))
+    );
+  }
+
+  /* Улучшенные стили для светлой темы */
+  .light-theme {
+    /* Тени */
+    --shadow-color: 220 3% 15%;
+    --shadow-strength: 1%;
+    --shadow-sm: 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+    --shadow-md: 0 3px 5px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
+    --shadow-lg: 0 5px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 2%));
+    
+    /* Градиенты */
+    --gradient-subtle: linear-gradient(to right bottom, hsl(142.1 76.2% 36.3%), hsl(142.1 76.2% 46.3%));
+    --gradient-vibrant: linear-gradient(to right bottom, hsl(142.1 76.2% 36.3%), hsl(160 84.1% 39.4%));
+    --gradient-text: linear-gradient(to right bottom, hsl(142.1 76.2% 36.3%), hsl(142.1 76.2% 26.3%));
+    
+    /* Эффекты */
+    --blur-sm: blur(8px);
+    --blur-md: blur(12px);
+    --blur-lg: blur(16px);
+    
+    /* Анимации */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-medium: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* Обновленная темная тема с серыми оттенками */
+    --background: 224 10% 10%;    /* Темно-серый фон */
+    --foreground: 0 0% 98%;
+    
+    --card: 224 10% 12%;         /* Чуть светлее фона */
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 224 10% 12%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 142 72% 35%;      /* Зеленый для акцентов */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 224 10% 15%;    /* Серый для вторичных элементов */
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 224 10% 15%;
+    --muted-foreground: 224 10% 70%;
+    
+    --accent: 142 72% 15%;
+    --accent-foreground: 0 0% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 224 10% 16%;
+    --input: 224 10% 16%;
+    --ring: 142 72% 35%;
+
+    /* Улучшенные эффекты для темной темы */
+    --shadow-strength: 45%;
+    --shadow-color: 228 16% 4%;
+    
+    /* Дополнительные эффекты */
+    --header-blur: blur(10px);
+    --header-bg: rgba(24, 26, 32, 0.85);
+    
+    /* Градиенты */
+    --gradient-1: linear-gradient(
+      to bottom right,
+      hsl(144 55% 45% / 0.06),
+      transparent
+    );
+    --gradient-2: linear-gradient(
+      to bottom right,
+      transparent,
+      hsl(228 16% 12% / 0.5)
+    );
+  }
 }
 
 /* Replace @apply with direct utility classes */
 * {
-  border-color: hsl(var(--border));
+  @apply border-border;
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  @apply bg-background text-foreground;
   position: relative;
   min-height: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-.dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-
-  --primary: 142.1 70.6% 45.3%;
-  --primary-foreground: 144.9 80.4% 10%;
-
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 142.1 76.2% 36.3%;
-
-  --primary-rgb: 34 197 94;
+  font-feature-settings: "rlig" 1, "calt" 1;
 }
 
 /* Градиентная линия для мобильной версии */
@@ -227,13 +309,53 @@ h2 {
 .dark {
   /* Улучшенные стили для карточек */
   .card {
-    @apply bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--card)),
+      hsl(var(--card) / 0.9)
+    );
+    border: 1px solid hsl(var(--border) / 0.4);
+    box-shadow: 
+      0 4px 6px -1px rgb(0 0 0 / 0.2),
+      0 2px 4px -2px rgb(0 0 0 / 0.2);
   }
 
+  /* Улучшенные стили для хедера */
+  .header {
+    backdrop-filter: var(--header-blur);
+    background: var(--header-bg);
+    border-bottom: 1px solid hsl(var(--border) / 0.3);
+  }
+  
   /* Улучшенные стили для кнопок */
   .button {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--secondary)),
+      hsl(var(--secondary) / 0.9)
+    );
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  
+  /* Улучшенные стили для активных элементов */
+  .active-nav-item {
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--primary) / 0.15),
+      hsl(var(--primary) / 0.05)
+    );
+    border: 1px solid hsl(var(--primary) / 0.25);
+  }
+  
+  /* Улучшенные стили для ховера */
+  .hover-effect:hover {
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--accent) / 0.3),
+      hsl(var(--accent) / 0.1)
+    );
+    transform: translateY(-1px);
   }
 
   /* Улучшенные стили для навигации */
@@ -270,12 +392,22 @@ h2 {
 
 /* Улучшенные стили для карточек */
 .card-hover {
-  @apply transform hover:scale-105 hover:shadow-lg transition-all duration-200;
+  @apply transition-all duration-300;
+  background: linear-gradient(
+    to bottom right,
+    hsl(var(--card)),
+    hsl(var(--background))
+  );
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* Улучшенные стили для кнопок */
-.button-hover {
-  @apply hover:scale-105 active:scale-95 transition-all duration-200;
+.card-hover:hover {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
 }
 
 /* В конец файла добавляем новые анимации */
@@ -323,11 +455,11 @@ h2 {
 }
 
 @keyframes shimmer {
-  from {
-    background-position: 200% 0;
-  }
-  to {
+  0% {
     background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 
@@ -396,16 +528,6 @@ h2 {
 
 .modal-exit {
   animation: scale-in 0.3s ease-in reverse forwards;
-}
-
-/* Улучшенные стили для карточек */
-.card-hover {
-  @apply transform hover:scale-105 hover:shadow-lg transition-all duration-200;
-}
-
-/* Улучшенные стили для кнопок */
-.button-hover {
-  @apply hover:scale-105 active:scale-95 transition-all duration-200;
 }
 
 /* Улучшенные стили для ссылок */
@@ -523,24 +645,15 @@ h2 {
   box-shadow: 0 0 50px 20px rgba(var(--primary) / 0.1);
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 .animate-shimmer {
-  animation: shimmer 2s infinite linear;
   background: linear-gradient(
     90deg,
-    rgba(var(--primary) / 0.1) 25%,
-    rgba(var(--primary) / 0.2) 50%,
-    rgba(var(--primary) / 0.1) 75%
+    transparent 25%,
+    hsl(var(--primary) / 0.1) 50%,
+    transparent 75%
   );
   background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
 }
 
 /* Добавьте в конец файла */
@@ -876,5 +989,218 @@ body {
 
 .gradient-animate {
   animation: gradient 5s ease infinite;
+}
+
+@layer utilities {
+  .animate-gradient {
+    animation: gradient 8s ease infinite;
+    background-size: 400% 400%;
+  }
+  
+  .animate-gradient-slow {
+    animation: gradient 8s ease infinite;
+    background-size: 400% 400%;
+  }
+  
+  .backdrop-blur-hover {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-gradient-shimmer {
+  background: linear-gradient(
+    45deg,
+    var(--primary) 0%,
+    var(--primary-light) 25%,
+    var(--primary) 50%,
+    var(--primary-light) 75%,
+    var(--primary) 100%
+  );
+  background-size: 200% 200%;
+  animation: gradient 8s linear infinite;
+}
+
+/* Улучшенные стили для светлой темы */
+.light-theme {
+  /* Фон и тени */
+  --shadow-color: 220 3% 15%;
+  --shadow-strength: 1%;
+  --shadow-1: 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+  --shadow-2: 0 3px 5px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
+  
+  /* Градиенты и акценты */
+  --gradient-1: linear-gradient(to bottom right, hsl(0 0% 100%), hsl(240 4.8% 95.9%));
+  --gradient-2: linear-gradient(to bottom, hsl(240 4.8% 95.9%), hsl(0 0% 100%));
+  
+  /* Цвета компонентов */
+  --header-bg: rgba(255, 255, 255, 0.8);
+  --card-bg: var(--gradient-1);
+  --button-hover: hsl(240 4.8% 95.9%);
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+  :root {
+    --radius: 0.5rem;
+  }
+
+  .mobile-nav {
+    --nav-bg: hsl(0 0% 100%);
+    --nav-border: hsl(240 5.9% 90%);
+    --nav-shadow: var(--shadow-2);
+  }
+}
+
+/* Улучшенные компоненты */
+.card-hover {
+  @apply transition-all duration-300;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-hover:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent;
+  background-image: var(--gradient-text);
+}
+
+.nav-item {
+  @apply relative px-3 py-2 text-sm font-medium transition-all;
+}
+
+.nav-item::after {
+  content: '';
+  @apply absolute bottom-0 left-0 h-0.5 w-full scale-x-0 bg-primary transition-transform;
+}
+
+.nav-item:hover::after {
+  @apply scale-x-100;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+  .mobile-container {
+    @apply px-4 mx-auto;
+    max-width: 100vw;
+  }
+
+  .mobile-card {
+    @apply rounded-lg border bg-card p-4;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--card)),
+      hsl(var(--background))
+    );
+  }
+
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0;
+    background: linear-gradient(
+      to top,
+      hsl(var(--background)) 80%,
+      transparent
+    );
+    backdrop-filter: blur(8px);
+  }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Градиентные эффекты */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(
+    to right,
+    hsl(var(--primary)),
+    hsl(var(--primary)) 50%,
+    hsl(var(--background)) 50%
+  );
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  transition: background-position 0.3s ease;
+}
+
+.gradient-border:hover {
+  background-position: 0 0;
+}
+
+/* Улучшенные стили для текста */
+.heading-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r;
+  background-image: linear-gradient(
+    45deg,
+    hsl(var(--primary)),
+    hsl(var(--info))
+  );
+}
+
+@layer components {
+  .card {
+    @apply relative overflow-hidden;
+    background: var(--gradient-card);
+    box-shadow: var(--card-glow);
+    transition: all 0.2s ease;
+  }
+  
+  .card:hover {
+    box-shadow: var(--card-glow),
+                0 6px 12px rgba(0, 0, 0, 0.03);
+    transform: translateY(-1px);
+  }
+  
+  .button {
+    @apply relative overflow-hidden;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--secondary)),
+      hsl(var(--secondary) / 0.9)
+    );
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+  }
+  
+  .button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+  
+  .header {
+    backdrop-filter: var(--header-blur);
+    background: var(--header-bg);
+    border-bottom: 1px solid hsl(var(--border) / 0.5);
+  }
 }
 

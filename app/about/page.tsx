@@ -32,9 +32,11 @@ export default function AboutPage() {
               Инновационная образовательная платформа, объединяющая экспертов и специалистов агропромышленного сектора
             </p>
             <div className="flex justify-center gap-4">
-              <Button size="lg" className="shadow-lg hover:shadow-xl transition-shadow">
-                <Link href="/courses">Начать обучение</Link>
-              </Button>
+              <Link href="/courses" passHref>
+                <Button size="lg" className="shadow-lg hover:shadow-xl transition-shadow">
+                  Начать обучение
+                </Button>
+              </Link>
               <Button variant="outline" size="lg" className="backdrop-blur-sm">
                 <Link href="/contact">Связаться с нами</Link>
               </Button>

@@ -1,135 +1,131 @@
 "use client"
 
-import { Bell, Search, LogOut, Book, Newspaper, User, MessageSquare, Home, Settings } from "lucide-react"
+import { Book, Newspaper, MessageSquare, Home, Menu, ArrowLeft, Trophy } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useRouter, usePathname } from "next/navigation"
-import { useSession, signOut } from "next-auth/react"
-import { NotificationsButton } from "@/components/notifications-button"
-import { MobileSidebar } from "@/components/mobile-sidebar"
+import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { NotificationsButton } from "@/components/notifications/notifications-button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { cn } from "@/lib/utils"
+import { MainNav } from "@/components/main-nav"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { UserNav } from "@/components/user-nav"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { Logo } from "@/components/ui/logo"
 
 export function Header() {
-  const router = useRouter()
   const pathname = usePathname()
   const { data: session } = useSession()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const isMobile = useMediaQuery("(max-width: 768px)")
+  const isAuthPage = pathname?.startsWith('/auth')
+
+  if (isAuthPage) return null
 
   const navigation = [
-    {
-      icon: Home,
-      label: "Главная",
-      href: "/",
-    },
-    {
-      icon: Book,
-      label: "Курсы",
-      href: "/courses",
-    },
-    {
-      icon: Newspaper,
-      label: "Статьи",
-      href: "/articles",
-    },
-    {
-      icon: MessageSquare,
-      label: "Сообщения",
-      href: "/messages",
-    },
-    {
-      icon: Book,
-      label: "База знаний",
-      href: "/knowledge",
-    },
+    { name: "Главная", href: "/", icon: Home },
+    { name: "Курсы", href: "/courses", icon: Book },
+    { name: "База знаний", href: "/knowledge", icon: Newspaper },
+    { name: "Сообщения", href: "/messages", icon: MessageSquare },
+    { name: "Достижения", href: "/achievements", icon: Trophy },
   ]
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full header">
       <div className="container flex h-14 items-center">
-        {/* Мобильное меню - показываем только на мобильных устройствах */}
-        <div className="md:hidden">
-          <MobileSidebar />
-        </div>
-        
-        {/* Логотип */}
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="font-bold text-xl">АЛЛЕЛЬ АГРО</span>
-        </Link>
-
-        {/* Основная навигация для ПК */}
-        <nav className="hidden md:flex items-center space-x-4 lg:space-x-6 mx-6">
-          {navigation.map((item) => (
-            <Button
-              key={item.href}
-              variant="ghost"
-              asChild
-              className={pathname === item.href ? "bg-accent" : ""}
-            >
-              <Link href={item.href} className="flex items-center space-x-2">
-                <item.icon className="h-4 w-4" />
-                <span>{item.label}</span>
-              </Link>
-            </Button>
-          ))}
-        </nav>
-
-        <div className="flex flex-1 items-center justify-end space-x-4">
-          {/* Поиск */}
-          <div className="hidden lg:flex items-center space-x-2">
-            <Input
-              type="search"
-              placeholder="Поиск..."
-              className="w-[200px] lg:w-[300px]"
-            />
-            <Button type="submit" size="icon" variant="ghost">
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {session ? (
-            <>
-              {/* Уведомления */}
-              <NotificationsButton />
-
-              {/* Профиль */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={session.user?.image || ""} alt={session.user?.name || ""} />
-                      <AvatarFallback>{session.user?.name?.[0]}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Профиль</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Настройки</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-red-600 focus:text-red-600"
-                    onClick={() => signOut()}
+        <div className="flex items-center gap-4">
+          {isMobile && (
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="shrink-0">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Меню</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent 
+                side="left" 
+                className={cn(
+                  "w-[80vw] max-w-[400px] p-0",
+                  "bg-gradient-to-b from-background to-muted/30"
+                )}
+                hideCloseButton
+              >
+                <div className="flex items-center justify-between border-b p-4 bg-background/95 backdrop-blur">
+                  <Logo showText />
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="hover:bg-accent rounded-full"
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Выйти</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <ArrowLeft className="h-5 w-5" />
+                    <span className="sr-only">Закрыть меню</span>
+                  </Button>
+                </div>
+                <nav className="flex flex-col py-2">
+                  {navigation.map((item) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-3 text-sm transition-colors",
+                          "hover:bg-accent/50",
+                          isActive && "bg-accent text-accent-foreground font-medium"
+                        )}
+                      >
+                        <Icon className={cn(
+                          "h-5 w-5",
+                          isActive ? "text-primary" : "text-muted-foreground"
+                        )} />
+                        {item.name}
+                      </Link>
+                    )
+                  })}
+                </nav>
+              </SheetContent>
+            </Sheet>
+          )}
+
+          {!isMobile && (
+            <div className="shrink-0">
+              <Logo showText={false} />
+            </div>
+          )}
+        </div>
+
+        {!isMobile && <MainNav />}
+
+        <div className="flex items-center gap-1.5 ml-auto">
+          {session?.user ? (
+            <>
+              <NotificationsButton />
+              <ThemeToggle />
+              <UserNav />
             </>
           ) : (
-            <Button asChild>
-              <Link href="/login">Войти</Link>
-            </Button>
+            <>
+              <ThemeToggle />
+              {!isMobile ? (
+                <>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/auth/login">Войти</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href="/auth/register">Регистрация</Link>
+                  </Button>
+                </>
+              ) : (
+                <Button asChild size="sm">
+                  <Link href="/auth/login">Войти</Link>
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>

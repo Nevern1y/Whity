@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model User {
@@ -17,18 +18,18 @@ model User {
   emailVerified       DateTime?
   image               String?
   hashedPassword      String?
-  role                Role              @default(USER)
+  role                UserRole          @default(USER)
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   accounts            Account[]
   sessions            Session[]
   authoredCourses     Course[]          @relation("AuthoredCourses")
   notifications       Notification[]
-  progress            Progress[]        // Прогресс по курсам
+  progress            Progress[]        @relation("UserProgress")
   activities          Activity[]
   sentMessages        Message[]         @relation("SentMessages")
   receivedMessages    Message[]         @relation("ReceivedMessages")
-  userAchievements    UserAchievement[]
+  userAchievements    UserAchievement[] @relation("UserAchievements")
   news                News[]            @relation("NewsAuthor")
   articles            Article[]         @relation("AuthoredArticles")
   sentFriendships     Friendship[]      @relation("SentFriendRequests")
@@ -43,15 +44,20 @@ model User {
   lastLoginAt         DateTime?
   isOnline            Boolean           @default(false)
   courseProgress      CourseProgress[]
-  lessonComments      LessonComment[]
+  lessonComments      LessonComment[]   @relation("UserComments")
   courseRatings       CourseRating[]    @relation("UserRatings")
   enrolledCourses     Course[]          @relation("EnrolledCourses")
   twoFactorEnabled    Boolean           @default(false) @map("two_factor_enabled")
   sessionTimeout      Int               @default(30) @map("session_timeout")
   securityLogs        SecurityLog[]
   securitySettings    Json?             @default("{}")
+  studySessions       StudySession[]
+  statistics          UserStatistics?   @relation("UserStatistics")
+  settings            UserSettings?
 
   @@index([email])
+  @@index([role])
+  @@index([isOnline])
   @@map("users")
 }
 
@@ -64,28 +70,32 @@ model Article {
   updatedAt DateTime @updatedAt
   author    User     @relation("AuthoredArticles", fields: [authorId], references: [id])
 
+  @@index([authorId])
   @@map("articles")
 }
 
 model Course {
-  id            String           @id @default(cuid())
-  title         String
-  description   String          @db.Text
-  image         String?
-  level         Level           @default(BEGINNER)
-  duration      String
-  published     Boolean         @default(false)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  authorId      String
-  author        User     @relation("AuthoredCourses", fields: [authorId], references: [id])
-  progress      Progress[]
-  lessons       Lesson[]
+  id             String           @id @default(cuid())
+  title          String
+  description    String           @db.Text
+  image          String?
+  level          Level            @default(BEGINNER)
+  duration       String
+  published      Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  authorId       String
+  author         User             @relation("AuthoredCourses", fields: [authorId], references: [id])
+  progress       Progress[]       @relation("CourseProgress")
+  lessons        Lesson[]
   courseProgress CourseProgress[]
-  courseRatings CourseRating[]    @relation("CourseRatings")
-  students      User[]   @relation("EnrolledCourses")
+  courseRatings  CourseRating[]   @relation("CourseRatings")
+  students       User[]           @relation("EnrolledCourses")
+  studySessions  StudySession[]
 
   @@index([authorId])
+  @@index([published])
+  @@index([level])
   @@map("courses")
 }
 
@@ -103,45 +113,49 @@ model Activity {
 }
 
 model Progress {
-  id            String   @id @default(cuid())
-  userId        String
-  courseId      String
-  lessonId      String?
-  completed     Int      @default(0)
-  totalTimeSpent Int     @default(0)
-  user          User     @relation("UserProgress", fields: [userId], references: [id], onDelete: Cascade)
-  course        Course   @relation("CourseProgress", fields: [courseId], references: [id], onDelete: Cascade)
-  lesson        Lesson?  @relation("LessonProgress", fields: [lessonId], references: [id], onDelete: SetNull)
+  id             String   @id @default(cuid())
+  userId         String
+  courseId       String
+  lessonId       String?
+  completed      Boolean  @default(false)
+  progress       Float    @default(0)
+  lastAccessed   DateTime @default(now())
+  totalTimeSpent Int      @default(0)
+  user           User     @relation("UserProgress", fields: [userId], references: [id], onDelete: Cascade)
+  course         Course   @relation("CourseProgress", fields: [courseId], references: [id], onDelete: Cascade)
+  lesson         Lesson?  @relation("LessonProgress", fields: [lessonId], references: [id], onDelete: SetNull)
 
   @@unique([userId, courseId, lessonId])
-  @@index([userId, completed])
+  @@index([userId])
+  @@index([courseId])
+  @@index([lessonId])
   @@map("progress")
 }
 
 model News {
-  id          String   @id @default(cuid())
-  title       String
-  content     String   @db.Text
-  image       String?
-  authorId    String
-  published   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  author      User     @relation("NewsAuthor", fields: [authorId], references: [id])
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  image     String?
+  authorId  String
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation("NewsAuthor", fields: [authorId], references: [id])
 
   @@index([authorId])
   @@map("news")
 }
 
 model Lesson {
-  id        String     @id @default(cuid())
+  id        String          @id @default(cuid())
   title     String
-  content   String     @db.Text
+  content   String          @db.Text
   courseId  String
-  createdAt DateTime   @default(now())
-  position  Int        @default(0)
-  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progress  Progress[] @relation("LessonProgress")
+  createdAt DateTime        @default(now())
+  position  Int             @default(0)
+  course    Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  Progress[]      @relation("LessonProgress")
   comments  LessonComment[] @relation("LessonComments")
 
   @@index([courseId])
@@ -162,25 +176,28 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+  @@index([type])
+  @@index([createdAt])
   @@map("notifications")
 }
 
 model Account {
-  id                String   @id @default(cuid())
+  id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?  @db.Text
+  id_token          String? @db.Text
   session_state     String?
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
   @@map("accounts")
 }
 
@@ -191,6 +208,7 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("sessions")
 }
 
@@ -203,6 +221,10 @@ model KnowledgeArticle {
   readTime  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([type])
+  @@map("knowledge_articles")
 }
 
 model Friendship {
@@ -231,6 +253,8 @@ model Message {
   sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
 
+  @@index([senderId])
+  @@index([receiverId])
   @@map("messages")
 }
 
@@ -251,8 +275,9 @@ model Achievement {
   condition        Json?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  userAchievements UserAchievement[]
+  userAchievements UserAchievement[] @relation("AchievementUsers")
 
+  @@index([type])
   @@map("achievements")
 }
 
@@ -260,15 +285,15 @@ model UserAchievement {
   id            String      @id @default(cuid())
   userId        String
   achievementId String
-  type          String
-  title         String
-  description   String
-  progress      Int         @default(0)
+  progress      Float       @default(0)
+  earnedAt      DateTime?
   completed     Boolean     @default(false)
-  user          User        @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
-  achievement   Achievement @relation("AchievementUsers", fields: [achievementId], references: [id], onDelete: Cascade)
+  user          User        @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade, map: "user_achievement_user_fkey")
+  achievement   Achievement @relation("AchievementUsers", fields: [achievementId], references: [id], onDelete: Cascade, map: "user_achievement_achievement_fkey")
 
   @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
   @@map("user_achievements")
 }
 
@@ -281,12 +306,13 @@ model UserStats {
   lastCalculated    DateTime @default(now())
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("user_stats")
 }
 
 enum UserRole {
-  USER
   ADMIN
+  USER
 }
 
 enum Level {
@@ -315,32 +341,34 @@ enum FriendshipStatus {
 }
 
 model CourseProgress {
-  id          String   @id @default(cuid())
-  userId      String
-  courseId    String
-  progress    Float    @default(0)
-  completedAt DateTime?
-  lastAccessedAt DateTime @default(now())
-  totalTimeSpent Int     @default(0)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  userId         String
+  courseId       String
+  progress       Float     @default(0)
+  completedAt    DateTime?
+  lastAccessedAt DateTime  @default(now())
+  totalTimeSpent Int       @default(0)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@index([userId])
+  @@index([courseId])
   @@map("course_progress")
 }
 
 model LessonComment {
   id        String   @id @default(cuid())
   content   String   @db.Text
-  lessonId  String
-  userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  lessonId  String
+  userId    String
   lesson    Lesson   @relation("LessonComments", fields: [lessonId], references: [id], onDelete: Cascade)
-  user      User     @relation("UserComments", fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserComments", fields: [userId], references: [id], onDelete: Cascade, map: "lesson_comment_user_fkey")
 
   @@index([lessonId])
+  @@index([userId])
   @@map("lesson_comments")
 }
 
@@ -373,4 +401,49 @@ model SecurityLog {
 
   @@index([userId])
   @@map("security_logs")
+}
+
+model UserStatistics {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation("UserStatistics", fields: [userId], references: [id], onDelete: Cascade)
+  totalTimeSpent Int      @default(0)
+  lastActiveAt   DateTime @default(now())
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastStreakDate DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model StudySession {
+  id        String    @id @default(cuid())
+  userId    String
+  courseId  String
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  duration  Int? // в минутах
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([courseId])
+}
+
+model UserSettings {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme         String   @default("system")
+  fontSize      String   @default("md")
+  animations    Boolean  @default(true)
+  notifications Json     @default("{}")
+  language      String   @default("ru")
+  timezone      String   @default("Europe/Moscow")
+  updatedAt     DateTime @updatedAt
 }

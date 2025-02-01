@@ -24,10 +24,38 @@ import { Suspense } from "react"
 import CourseProgressWrapper from "./_components/course-progress-wrapper"
 import ActivityFeedWrapper from "./_components/activity-feed-wrapper"
 import UserAchievementsWrapper from "./_components/user-achievements-wrapper"
+import { motion } from "framer-motion"
+import { Award, ArrowUp, Target } from "lucide-react"
+import { StatsCards } from "./_components/stats-cards"
 
 export const metadata: Metadata = {
   title: "Профиль | Аллель Агро",
   description: "Управление профилем пользователя",
+}
+
+// Добавим интерфейсы для типизации данных
+interface CourseProgress {
+  completedAt: Date | null;
+  totalTimeSpent: number;
+}
+
+interface CourseRating {
+  rating: number;
+}
+
+interface Friendship {
+  id: string;
+}
+
+interface UserData {
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  courseProgress: CourseProgress[];
+  userAchievements: { id: string }[];
+  sentFriendships: Friendship[];
+  receivedFriendships: Friendship[];
+  courseRatings: CourseRating[];
 }
 
 async function getProfileData(userId: string) {
@@ -62,20 +90,20 @@ async function getProfileData(userId: string) {
         }
       }
     }
-  })
+  }) as UserData | null
 
   if (!userData) return null
 
-  // Вычисляем статистику
+  // Вычисляем статистику с правильной типизацией
   const stats = {
-    completedCourses: userData.courseProgress.filter(p => p.completedAt !== null).length,
+    completedCourses: userData.courseProgress.filter((p: CourseProgress) => p.completedAt !== null).length,
     totalFriends: userData.sentFriendships.length + userData.receivedFriendships.length,
     averageRating: userData.courseRatings.length > 0
-      ? (userData.courseRatings.reduce((acc, curr) => acc + curr.rating, 0) / userData.courseRatings.length).toFixed(1)
+      ? (userData.courseRatings.reduce((acc: number, curr: CourseRating) => acc + curr.rating, 0) / userData.courseRatings.length).toFixed(1)
       : "0.0",
     achievements: userData.userAchievements.length,
     totalProgress: userData.courseProgress.length > 0
-      ? userData.courseProgress.reduce((acc, curr) => acc + curr.totalTimeSpent, 0) / userData.courseProgress.length
+      ? userData.courseProgress.reduce((acc: number, curr: CourseProgress) => acc + curr.totalTimeSpent, 0) / userData.courseProgress.length
       : 0
   }
 
@@ -89,128 +117,138 @@ async function getProfileData(userId: string) {
   }
 }
 
+async function getUserStats(userId: string) {
+  // Здесь должна быть логика получения статистики пользователя из БД
+  return {
+    coursesCompleted: 0,
+    achievements: 0,
+    rating: 0.0,
+    friends: 0,
+    totalStudyTime: 0,
+    certificatesEarned: 0,
+    currentStreak: 0,
+    learningGoals: {
+      daily: 30, // минут
+      progress: 0
+    }
+  }
+}
+
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.id) redirect("/login")
+  if (!session) redirect("/login")
 
   const profileData = await getProfileData(session.user.id)
-  if (!profileData) return null
+  const stats = await getUserStats(session.user.id)
 
   return (
-    <div className="container py-8">
-      {/* Верхняя секция профиля */}
-      <div className="mb-8 bg-card rounded-lg p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-          {/* Аватар и основная информация */}
-          <div className="flex flex-col items-center md:items-start gap-4">
-            <ProfilePhotoUpload currentPhotoUrl={profileData.user.image} />
-            <div className="text-center md:text-left">
-              <h1 className="text-2xl font-bold">{profileData.user.name}</h1>
-              <p className="text-muted-foreground">{profileData.user.email}</p>
+    <div className="container py-6 space-y-8">
+      {/* Профиль */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <Avatar className="w-24 h-24">
+              <AvatarImage src={profileData?.user.image || undefined} />
+              <AvatarFallback className="text-2xl">
+                {profileData?.user.name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2 text-center md:text-left">
+              <h1 className="text-2xl font-bold">{profileData?.user.name}</h1>
+              <p className="text-muted-foreground">{profileData?.user.email}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Обновленная статистика с реальными данными */}
-          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard 
-              icon={BookOpen} 
-              title="Курсов пройдено" 
-              value={profileData.stats.completedCourses.toString()} 
-            />
-            <StatCard 
-              icon={Trophy} 
-              title="Достижений" 
-              value={profileData.stats.achievements.toString()} 
-            />
-            <StatCard 
-              icon={Star} 
-              title="Рейтинг" 
-              value={profileData.stats.averageRating} 
-            />
-            <StatCard 
-              icon={Users2} 
-              title="Друзей" 
-              value={profileData.stats.totalFriends.toString()} 
-            />
+      {/* Статистика */}
+      {profileData && <StatsCards stats={profileData.stats} />}
+
+      {/* Вкладки с детальной информацией */}
+      <Tabs defaultValue="progress" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="progress">Прогресс обучения</TabsTrigger>
+          <TabsTrigger value="achievements">Достижения</TabsTrigger>
+          <TabsTrigger value="activity">Активность</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="progress">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Время обучения
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <p className="text-muted-foreground">Всего часов</p>
+                    <p className="font-medium">{Math.floor(stats.totalStudyTime / 60)} ч</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p className="text-muted-foreground">Сегодня</p>
+                    <div className="space-y-2">
+                      <Progress value={(stats.learningGoals.progress / stats.learningGoals.daily) * 100} />
+                      <p className="text-sm text-right text-muted-foreground">
+                        {stats.learningGoals.progress} / {stats.learningGoals.daily} мин
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="w-5 h-5" />
+                  Текущие цели
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <ArrowUp className="w-5 h-5 text-green-500" />
+                    <div>
+                      <p className="font-medium">Серия: {stats.currentStreak} дней</p>
+                      <p className="text-sm text-muted-foreground">Продолжайте учиться каждый день</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Award className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="font-medium">Сертификатов: {stats.certificatesEarned}</p>
+                      <p className="text-sm text-muted-foreground">Заработано за все время</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </div>
+        </TabsContent>
 
-      {/* Основной контент */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Левая колонка */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Текущий прогресс */}
+        <TabsContent value="achievements">
+          {stats.achievements === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Trophy className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-muted-foreground">Пока нет достижений</p>
+                <p className="text-sm text-muted-foreground">Начните проходить курсы, чтобы получить первые достижения</p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </TabsContent>
+
+        <TabsContent value="activity">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Текущий прогресс обучения
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={<div>Загрузка...</div>}>
-                {/* @ts-expect-error Async Server Component */}
-                <CourseProgressWrapper userId={session.user.id} />
-              </Suspense>
+            <CardContent className="p-6">
+              {/* Здесь можно добавить график активности */}
             </CardContent>
           </Card>
-
-          {/* Активность */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Последняя активность
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={<div>Загрузка...</div>}>
-                {/* @ts-expect-error Async Server Component */}
-                <ActivityFeedWrapper userId={session.user.id} />
-              </Suspense>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Правая колонка */}
-        <div className="space-y-6">
-          <FriendRequests />
-          {/* Достижения */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5" />
-                Достижения
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={<div>Загрузка...</div>}>
-                {/* @ts-expect-error Async Server Component */}
-                <UserAchievementsWrapper userId={session.user.id} />
-              </Suspense>
-            </CardContent>
-          </Card>
-
-          {/* Сертификаты */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="w-5 h-5" />
-                Сертификаты
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Здесь будет список сертификатов */}
-                <p className="text-muted-foreground text-sm">
-                  Пока нет полученных сертификатов
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -24,14 +24,15 @@ interface NotificationsContextType {
   markAsRead: (id: string) => void
   markAllAsRead: () => void
   loading: boolean
+  addNotification: (notification: Omit<Notification, 'id' | 'read'>) => void
 }
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined)
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
-  const { data: session } = useSession()
   const socket = useSocket(session?.user?.id)
 
   const fetchNotifications = useCallback(async () => {
@@ -41,16 +42,18 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       const data = await response.json()
       setNotifications(data)
     } catch (error) {
-      toast.error("Не удалось загрузить уведомления")
-      console.error(error)
+      console.error('Error fetching notifications:', error)
+      toast.error('Не удалось загрузить уведомления')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchNotifications()
-  }, [fetchNotifications])
+    if (session?.user) {
+      fetchNotifications()
+    }
+  }, [session, fetchNotifications])
 
   useEffect(() => {
     if (!socket) return
@@ -89,26 +92,25 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, [socket])
 
-  const markAsRead = useCallback(async (id: string) => {
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  const markAsRead = async (id: string) => {
     try {
       const response = await fetch(`/api/notifications/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ read: true }),
       })
-      
-      if (!response.ok) throw new Error('Failed to mark notification as read')
+      if (!response.ok) throw new Error('Failed to mark as read')
       
       setNotifications(prev =>
-        prev.map(notification =>
-          notification.id === id ? { ...notification, read: true } : notification
-        )
+        prev.map(n => n.id === id ? { ...n, read: true } : n)
       )
     } catch (error) {
-      toast.error("Не удалось отметить уведомление как прочитанное")
-      console.error(error)
+      console.error('Error marking as read:', error)
+      toast.error('Не удалось отметить как прочитанное')
     }
-  }, [])
+  }
 
   const markAllAsRead = useCallback(async () => {
     try {
@@ -125,7 +127,14 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, [])
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const addNotification = (notification: Omit<Notification, 'id' | 'read'>) => {
+    const newNotification = {
+      ...notification,
+      id: Date.now().toString(),
+      read: false
+    }
+    setNotifications([newNotification, ...notifications])
+  }
 
   return (
     <NotificationsContext.Provider 
@@ -134,7 +143,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         unreadCount, 
         markAsRead, 
         markAllAsRead,
-        loading 
+        loading,
+        addNotification 
       }}
     >
       {children}

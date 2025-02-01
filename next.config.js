@@ -32,6 +32,7 @@ const nextConfig = {
       bodySizeLimit: '2mb'
     }
   },
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
 }
 
 module.exports = nextConfig 

@@ -34,39 +34,44 @@ export function HeroButtons() {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         {!session ? (
           <motion.div variants={item}>
-            <Button 
-              size="lg" 
-              className="bg-gradient-to-r from-primary to-primary/80"
-              href="/courses"
-            >
-              <BookOpen className="mr-2 h-5 w-5" />
-              Начать обучение
-            </Button>
+            <Link href="/courses" passHref>
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-primary to-primary/80"
+              >
+                <BookOpen className="mr-2 h-5 w-5" />
+                Начать обучение
+              </Button>
+            </Link>
           </motion.div>
         ) : (
           <motion.div variants={item}>
-            <Button 
-              size="lg" 
-              className="bg-gradient-to-r from-primary to-primary/80"
-              href="/dashboard"
-            >
-              <Rocket className="mr-2 h-5 w-5" />
-              Перейти к обучению
-            </Button>
+            <Link href="/dashboard" passHref>
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-primary to-primary/80"
+              >
+                <Rocket className="mr-2 h-5 w-5" />
+                Перейти к обучению
+              </Button>
+            </Link>
           </motion.div>
         )}
       </div>
 
       <motion.div variants={item} className="flex justify-center">
-        <Button 
-          variant="ghost" 
-          size="lg"
-          className="text-muted-foreground hover:text-primary transition-colors group"
-          href="/about"
-        >
-          <Info className="mr-2 h-4 w-4" />
-          <span className="group-hover:mr-1 transition-all">Узнать больше о платформе</span>
-        </Button>
+        <Link href="/about" passHref>
+          <Button 
+            variant="ghost" 
+            size="lg"
+            className="text-muted-foreground hover:text-primary transition-colors group"
+          >
+            <Info className="mr-2 h-4 w-4" />
+            <span className="group-hover:mr-1 transition-all">
+              Узнать больше о платформе
+            </span>
+          </Button>
+        </Link>
       </motion.div>
     </motion.div>
   )

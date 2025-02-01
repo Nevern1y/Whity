@@ -11,6 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 
 export function UploadProfilePhoto() {
@@ -69,71 +70,61 @@ export function UploadProfilePhoto() {
   }
 
   return (
-    <>
-      <div className="flex gap-2">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
         <Button
           variant="outline"
-          onClick={() => setIsOpen(true)}
           disabled={isLoading}
         >
           <Camera className="mr-2 h-4 w-4" />
           Загрузить фото
         </Button>
-        <Button
-          variant="outline"
-          className="text-destructive"
-          onClick={() => toast.error('Функция в разработке')}
-        >
-          Удалить
-        </Button>
-      </div>
+      </DialogTrigger>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Загрузить фото профиля</DialogTitle>
-            <DialogDescription>
-              Перетащите изображение или нажмите для выбора файла
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Загрузить фото профиля</DialogTitle>
+          <DialogDescription>
+            Перетащите изображение или нажмите для выбора файла
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div
+          className={`
+            relative rounded-lg border-2 border-dashed p-12 text-center
+            ${dragActive ? "border-primary bg-primary/10" : "border-muted"}
+            transition-colors
+          `}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handleFile(file)
+            }}
+            disabled={isLoading}
+          />
           
-          <div
-            className={`
-              relative rounded-lg border-2 border-dashed p-12 text-center
-              ${dragActive ? "border-primary bg-primary/10" : "border-muted"}
-              transition-colors
-            `}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => inputRef.current?.click()}
-          >
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/jpg"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) handleFile(file)
-              }}
-              disabled={isLoading}
-            />
-            
-            {isLoading ? (
-              <Loader2 className="mx-auto h-10 w-10 animate-spin text-muted-foreground" />
-            ) : (
-              <div>
-                <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  PNG, JPG до 10MB
-                </p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+          {isLoading ? (
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-muted-foreground" />
+          ) : (
+            <div>
+              <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                PNG, JPG до 10MB
+              </p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 } 

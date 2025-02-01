@@ -1,78 +1,111 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
+import React from 'react'
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
-import { Bell, Check, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Check, Bell, Award, BookOpen, MessageSquare } from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-interface NotificationItemProps {
-  id: string
-  title: string
-  message: string
-  type: string
-  createdAt: Date
-  read: boolean
+const notificationIcons = {
+  course: BookOpen,
+  achievement: Award,
+  message: MessageSquare,
+  news: Bell,
+} as const
+
+export interface NotificationItemProps {
+  notification: {
+    id: string
+    title: string
+    message: string
+    type: keyof typeof notificationIcons
+    read: boolean
+    createdAt: Date
+    link?: string
+  }
   onRead: (id: string) => void
-  onDismiss: (id: string) => void
+  className?: string
 }
 
-export function NotificationItem({
-  id,
-  title,
-  message,
-  type,
-  createdAt,
-  read,
-  onRead,
-  onDismiss
-}: NotificationItemProps) {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -100 }}
+export function NotificationItem({ notification, onRead, className }: NotificationItemProps) {
+  const Icon = notificationIcons[notification.type]
+  const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
+    addSuffix: true,
+    locale: ru
+  })
+
+  const handleRead = () => {
+    if (!notification.read) {
+      onRead(notification.id)
+    }
+  }
+
+  const content = (
+    <div 
       className={cn(
-        "relative p-4 rounded-lg border",
-        read ? "bg-background" : "bg-primary/5"
+        "flex items-start gap-4 p-4 transition-all rounded-lg",
+        "hover:bg-accent/50 card-hover",
+        notification.read 
+          ? "bg-background" 
+          : "bg-gradient-to-r from-primary/10 to-background border-l-2 border-primary",
+        className
       )}
+      onClick={handleRead}
     >
-      <div className="flex gap-4">
-        <div className="flex-shrink-0">
-          <Bell className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between gap-2">
-            <p className="text-sm font-medium">{title}</p>
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(createdAt), { 
-                addSuffix: true,
-                locale: ru 
-              })}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-            {message}
-          </p>
-        </div>
+      <div className={cn(
+        "flex h-10 w-10 items-center justify-center rounded-full",
+        notification.read 
+          ? "bg-muted text-muted-foreground" 
+          : "bg-primary/10 text-primary"
+      )}>
+        <Icon className={cn(
+          "h-5 w-5",
+          notification.read ? "text-muted-foreground" : "text-primary"
+        )} />
       </div>
-      <div className="absolute top-4 right-4 flex gap-1">
-        {!read && (
-          <button
-            onClick={() => onRead(id)}
-            className="p-1 hover:bg-accent rounded-full"
-          >
-            <Check className="h-4 w-4" />
-          </button>
-        )}
-        <button
-          onClick={() => onDismiss(id)}
-          className="p-1 hover:bg-accent rounded-full"
+      <div className="flex-1 space-y-1">
+        <p className={cn(
+          "text-sm font-medium leading-none",
+          notification.read ? "text-muted-foreground" : "text-foreground"
+        )}>
+          {notification.title}
+        </p>
+        <p className={cn(
+          "text-sm text-muted-foreground",
+          "line-clamp-2"
+        )}>
+          {notification.message}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {timeAgo}
+        </p>
+      </div>
+      {!notification.read && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="shrink-0 text-primary"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRead(notification.id)
+          }}
         >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-    </motion.div>
+          <Check className="h-4 w-4" />
+          <span className="sr-only">Отметить как прочитанное</span>
+        </Button>
+      )}
+    </div>
   )
+
+  if (notification.link) {
+    return (
+      <Link href={notification.link} className="block">
+        {content}
+      </Link>
+    )
+  }
+
+  return content
 } 

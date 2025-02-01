@@ -1,16 +1,19 @@
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import * as React from "react"
 import Link from "next/link"
-import { ButtonProps } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
+import type { ButtonProps } from "@/components/ui/button"
 
 interface LinkButtonProps extends ButtonProps {
   href: string
+  children: React.ReactNode
 }
 
-export function LinkButton({ href, className, children, ...props }: LinkButtonProps) {
+export function LinkButton({ href, children, ...props }: LinkButtonProps) {
   return (
-    <Link href={href} className={cn("block", className)}>
-      <Button {...props}>{children}</Button>
+    <Link href={href} passHref>
+      <Button {...props}>
+        {children}
+      </Button>
     </Link>
   )
 } 

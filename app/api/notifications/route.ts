@@ -4,28 +4,27 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
 import { Server } from "socket.io"
 import type { Notification } from "@/lib/notifications"
+import { auth } from "@/lib/auth"
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    const session = await auth()
+    if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
     const notifications = await prisma.notification.findMany({
       where: {
-        userId: session.user.id,
-        read: false
+        userId: session.user.id
       },
       orderBy: {
         createdAt: 'desc'
-      },
-      take: 10
+      }
     })
 
     return NextResponse.json(notifications)
   } catch (error) {
-    console.error("[NOTIFICATIONS_GET]", error)
+    console.error('Failed to fetch notifications:', error)
     return new NextResponse("Internal Error", { status: 500 })
   }
 }

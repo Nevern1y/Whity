@@ -1,12 +1,12 @@
 import NextAuth, { type NextAuthOptions } from "next-auth"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { PrismaAdapter } from "@auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
-import { Role } from "@prisma/client"
+import { UserRole } from "@/types/next-auth"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: "jwt",
   },
@@ -42,22 +42,27 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Неверный пароль")
         }
 
-        return user
+        return {
+          id: user.id,
+          email: user.email,
+          role: user.role as UserRole,
+          name: user.name
+        }
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role as Role
+        token.role = user.role
         token.id = user.id
       }
       return token
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.role = token.role as Role
-        session.user.id = token.id as string
+        session.user.role = token.role
+        session.user.id = token.id
       }
       return session
     }

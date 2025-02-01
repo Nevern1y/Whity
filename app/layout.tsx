@@ -3,7 +3,8 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { Providers } from "./providers"
+import { Providers } from "@/components/providers"
+import { AchievementPopup } from "@/components/achievements/achievement-popup"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -26,6 +27,7 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <AchievementPopup />
         </Providers>
       </body>
     </html>

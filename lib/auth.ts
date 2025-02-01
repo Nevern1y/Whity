@@ -1,14 +1,17 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import { PrismaAdapter } from "@auth/prisma-adapter"
 import { NextAuthOptions } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { getServerSession } from "next-auth/next"
+import { UserRole } from "@/types/next-auth"
+import { Adapter } from "next-auth/adapters"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as Adapter,
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/login",
@@ -28,16 +31,23 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            password: true,
+            role: true
           }
         })
 
-        if (!user || !user.hashedPassword) {
+        if (!user) {
           return null
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
-          user.hashedPassword
+          user.password
         )
 
         if (!isPasswordValid) {
@@ -48,21 +58,20 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          image: user.image,
-          role: user.role,
+          role: user.role
         }
       }
     })
   ],
   callbacks: {
-    async session({ session, token }) {
+    async session({ token, session }) {
       if (token) {
         session.user.id = token.id
         session.user.name = token.name
         session.user.email = token.email
-        session.user.image = token.picture
-        session.user.role = token.role
+        session.user.role = token.role as UserRole
       }
+
       return session
     },
     async jwt({ token, user }) {
