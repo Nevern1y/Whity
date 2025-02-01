@@ -24,21 +24,27 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, src, alt = "", style, ...props }, ref) => {
-  if (!src) return null
+  // Используем дефолтный аватар, если src не предоставлен
+  const defaultAvatarUrl = "/images/default_avatar.png"
+  const imageUrl = src || defaultAvatarUrl
 
-  // Преобразуем относительный путь в абсолютный
-  const imageUrl = src.startsWith('/') 
-    ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${src}`
-    : src
+  // Форматируем URL для локальных путей
+  const formattedUrl = imageUrl.startsWith('/') && !imageUrl.startsWith('blob:')
+    ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${imageUrl}`
+    : imageUrl
+
+  const { width, height, ...imageProps } = props
 
   return (
     <div className="relative h-full w-full">
       <Image
-        src={imageUrl}
+        src={formattedUrl}
         alt={alt}
         fill
-        className={cn("object-cover", className)}
-        unoptimized // Добавляем это для локальных изображений
+        className={cn("aspect-square h-full w-full object-cover", className)}
+        sizes="(max-width: 40px) 100vw, 40px"
+        priority
+        {...imageProps}
       />
     </div>
   )

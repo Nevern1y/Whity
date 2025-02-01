@@ -46,26 +46,43 @@ export function UploadProfilePhoto() {
       return
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Размер файла не должен превышать 10MB")
+      return
+    }
+
     try {
       setIsLoading(true)
       const formData = new FormData()
       formData.append('file', file)
 
-      const uploadResponse = await fetch('/api/upload', {
+      const response = await fetch('/api/profile/avatar', {
         method: 'POST',
-        body: formData
+        body: formData,
       })
 
-      if (!uploadResponse.ok) throw new Error('Failed to upload file')
-      
-      toast.success('Фото профиля обновлено')
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Failed to upload file')
+      }
+
+      const { success, url } = await response.json()
+
+      if (!success) {
+        throw new Error('Failed to upload file')
+      }
+
+      toast.success("Фото профиля обновлено")
       setIsOpen(false)
-      // Принудительно обновляем страницу для отображения нового фото
-      window.location.reload()
+      router.refresh()
     } catch (error) {
-      toast.error('Не удалось обновить фото')
+      console.error('Upload error:', error)
+      toast.error('Не удалось загрузить фото')
     } finally {
       setIsLoading(false)
+      if (inputRef.current) {
+        inputRef.current.value = ''
+      }
     }
   }
 

@@ -35,11 +35,7 @@ export async function POST(request: Request) {
 
     // Создаем директорию, если её нет
     const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-    try {
-      await mkdir(uploadDir, { recursive: true })
-    } catch (error) {
-      // Игнорируем ошибку, если директория уже существует
-    }
+    await mkdir(uploadDir, { recursive: true })
 
     // Генерируем уникальное имя файла
     const ext = path.extname(file.name)
@@ -51,11 +47,20 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // Формируем абсолютный URL для файла
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const fileUrl = `/uploads/${fileName}`
 
-    // Обновляем профиль пользователя
+    // Создаем запись в БД о загруженном файле
+    const upload = await prisma.upload.create({
+      data: {
+        fileName,
+        fileType: file.type,
+        filePath: fileUrl,
+        fileSize: file.size,
+        userId: session.user.id,
+      },
+    })
+
+    // Обновляем аватар пользователя
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: { image: fileUrl }

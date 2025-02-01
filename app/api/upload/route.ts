@@ -12,53 +12,48 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const form = await req.formData()
-    const file = form.get("file") as File
-    
+    const formData = await req.formData()
+    const file = formData.get("file") as File
     if (!file) {
-      return new NextResponse("No file in request", { status: 400 })
+      return new NextResponse("No file uploaded", { status: 400 })
     }
 
-    // Создаем директорию, если её нет
-    const uploadDir = join(process.cwd(), "public/uploads/avatars")
-    try {
-      await fs.promises.mkdir(uploadDir, { recursive: true })
-    } catch (error) {
-      console.error("Error creating directory:", error)
+    // Проверяем тип файла
+    if (!file.type.startsWith("image/")) {
+      return new NextResponse("File must be an image", { status: 400 })
     }
 
     // Создаем уникальное имя файла
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    const fileName = `avatar-${session.user.id}-${Date.now()}.jpg`
-    const path = join(uploadDir, fileName)
-    
+    const fileName = `${session.user.id}-${Date.now()}-${file.name}`
+    const filePath = join("public", "uploads", fileName)
+    const buffer = Buffer.from(await file.arrayBuffer())
+
     // Сохраняем файл
-    await writeFile(path, buffer)
-    const fileUrl = `/uploads/avatars/${fileName}`
+    await writeFile(filePath, buffer)
 
-    // Удаляем старый файл, если он существует
-    if (session.user.image) {
-      const oldPath = join(process.cwd(), "public", session.user.image)
-      try {
-        await fs.promises.unlink(oldPath)
-      } catch (error) {
-        console.error("Error deleting old file:", error)
-      }
-    }
+    // Сохраняем информацию о файле в базу данных
+    const upload = await prisma.upload.create({
+      data: {
+        fileName,
+        fileType: file.type,
+        filePath: `/uploads/${fileName}`,
+        fileSize: file.size,
+        userId: session.user.id,
+      },
+    })
 
-    // Обновляем URL в базе данных
-    const updatedUser = await prisma.user.update({
+    // Обновляем поле image у пользователя
+    await prisma.user.update({
       where: { id: session.user.id },
-      data: { image: fileUrl }
+      data: { image: `/uploads/${fileName}` },
     })
 
     return NextResponse.json({ 
-      url: fileUrl,
-      user: updatedUser 
+      url: `/uploads/${fileName}`,
+      upload 
     })
   } catch (error) {
-    console.error("Error uploading file:", error)
-    return new NextResponse("Error uploading file", { status: 500 })
+    console.error("Upload error:", error)
+    return new NextResponse("Internal Server Error", { status: 500 })
   }
 } 
