@@ -4,8 +4,11 @@ import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils"
-import { Bell, Book, Trophy, Star, MessageSquare, Check, Trash2 } from "lucide-react"
+import { Bell, Book, Trophy, Star, MessageSquare, Check, Trash2, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { NotificationItem } from "@/components/notifications/notification-item"
+import { toast } from "sonner"
+import { useState } from "react"
 
 export const metadata: Metadata = {
   title: "Уведомления | Аллель Агро",
@@ -72,6 +75,30 @@ export default async function NotificationsPage() {
   }
 
   const notifications = await getNotifications()
+  const [isClearing, setIsClearing] = useState(false)
+
+  const handleClearAll = async () => {
+    try {
+      setIsClearing(true)
+      const response = await fetch('/api/notifications/clear', {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Здесь должна быть обновленная логика получения уведомлений
+        // Для примера, используем тот же массив
+        // В реальном приложении это должно быть асинхронное получение новых уведомлений
+        // const newNotifications = await getNotifications()
+        // setNotifications(newNotifications)
+        toast.success('Уведомления очищены')
+      }
+    } catch (error) {
+      console.error('Failed to clear notifications:', error)
+      toast.error('Не удалось очистить уведомления')
+    } finally {
+      setIsClearing(false)
+    }
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -89,8 +116,18 @@ export default async function NotificationsPage() {
               <Check className="h-4 w-4 mr-2" />
               Прочитать все
             </Button>
-            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-              <Trash2 className="h-4 w-4 mr-2" />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="text-destructive hover:text-destructive"
+              onClick={handleClearAll}
+              disabled={isClearing || notifications.length === 0}
+            >
+              {isClearing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
               Очистить
             </Button>
           </div>

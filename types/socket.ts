@@ -1,16 +1,16 @@
 import { Server as NetServer } from "http"
 import { NextApiResponse } from "next"
-import { Server as ServerIO } from "socket.io"
-import { Socket } from "socket.io-client"
+import { Server as SocketIOServer } from "socket.io"
+import { Socket as ClientSocket } from "socket.io-client"
 import { Server } from "socket.io"
 
 export interface ChatMessage {
   id: string
   content: string
   senderId: string
+  recipientId: string
   createdAt: string
   sender: {
-    id: string
     name: string | null
     image: string | null
   }
@@ -58,7 +58,7 @@ export interface SocketData {
   // Определите пользовательские данные сокета здесь
 }
 
-export type ClientSocketType = Socket<ServerToClientEvents, ClientToServerEvents>
+export type SocketClient = typeof ClientSocket
 
 export type SocketCallback<T extends keyof ServerToClientEvents> = Parameters<ServerToClientEvents[T]>[0]
 

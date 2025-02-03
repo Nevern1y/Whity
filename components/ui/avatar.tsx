@@ -12,7 +12,8 @@ const Avatar = React.forwardRef<
   <AvatarPrimitive.Root
     ref={ref}
     className={cn(
-      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-background shadow-sm",
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      "ring-2 ring-background/50 shadow-sm",
       className
     )}
     {...props}
@@ -24,20 +25,17 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, src, alt = "", ...props }, ref) => {
-  // Используем дефолтный аватар, если src не предоставлен
-  const defaultAvatarUrl = "/images/default_avatar.png"
-  const imageUrl = src || defaultAvatarUrl
+  if (!src) return null;
 
   return (
     <div className="relative h-full w-full">
       <Image
-        src={imageUrl}
+        src={src}
         alt={alt}
         fill
         className={cn("aspect-square h-full w-full object-cover", className)}
         sizes="(max-width: 40px) 100vw, 40px"
         priority
-        unoptimized={false}
       />
     </div>
   )

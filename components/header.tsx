@@ -16,6 +16,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { Logo } from "@/components/ui/logo"
 import { useUserStore } from "@/lib/store/user-store"
 import { useSyncUserImage } from "@/hooks/use-sync-user-image"
+import NotificationCard from "@/components/notificationCard"
 
 export function Header() {
   const pathname = usePathname()

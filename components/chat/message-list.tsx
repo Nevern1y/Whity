@@ -12,22 +12,44 @@ import { useSession } from "next-auth/react"
 import { UserPlus, UserCheck, Heart, Send, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { socketClient } from "@/lib/socket-client"
+import { UserAvatar } from "@/components/user-avatar"
 import type { ChatMessage } from "@/types/socket"
 
-interface Message extends ChatMessage {
-  // дополнительные поля, если нужны
-}
-
-interface MessageListProps {
-  selectedUser: {
-    id: string
+// Общий интерфейс для сообщений
+interface BaseMessage {
+  id: string
+  content: string
+  senderId: string
+  sender: {
     name: string | null
     image: string | null
-    friendshipStatus: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
   }
 }
 
-export function MessageList({ selectedUser }: MessageListProps) {
+// Расширенный интерфейс для сообщений из API
+interface Message extends BaseMessage {
+  recipientId: string
+  createdAt: Date
+}
+
+// Функция для преобразования даты из строки в Date
+function convertMessage(message: ChatMessage): Message {
+  return {
+    id: message.id,
+    content: message.content,
+    senderId: message.senderId,
+    recipientId: message.recipientId,
+    createdAt: new Date(message.createdAt),
+    sender: message.sender
+  }
+}
+
+interface MessageListProps {
+  recipientId: string
+  friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
+}
+
+export function MessageList({ recipientId, friendshipStatus = 'NONE' }: MessageListProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
@@ -36,6 +58,15 @@ export function MessageList({ selectedUser }: MessageListProps) {
   const [isAddingFriend, setIsAddingFriend] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const isFirstRenderRef = useRef(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   // Функция отправки запроса в друзья
   const handleAddFriend = async () => {
@@ -44,7 +75,7 @@ export function MessageList({ selectedUser }: MessageListProps) {
       const response = await fetch('/api/friends', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: selectedUser.id })
+        body: JSON.stringify({ targetUserId: recipientId })
       })
 
       if (!response.ok) throw new Error('Failed to send friend request')
@@ -59,22 +90,22 @@ export function MessageList({ selectedUser }: MessageListProps) {
   // Функция отправки сообщения
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim() || isSending) return
+    if (!newMessage.trim() || isSending || !session?.user?.id) return
 
     try {
       setIsSending(true)
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          receiverId: selectedUser.id,
-          content: newMessage 
+        body: JSON.stringify({
+          content: newMessage,
+          recipientId
         })
       })
 
       if (!response.ok) throw new Error('Failed to send message')
       
-      const message = await response.json()
+      const message: Message = await response.json()
       setMessages(prev => [...prev, message])
       setNewMessage("")
     } catch (error) {
@@ -88,29 +119,36 @@ export function MessageList({ selectedUser }: MessageListProps) {
     const socket = socketClient.getSocket()
     if (!socket) return
 
-    socketClient.emit('join_chat', selectedUser.id)
+    socketClient.emit('join_chat', recipientId)
     
     const handleNewMessage = (message: ChatMessage) => {
-      setMessages(prev => [...prev, message])
+      // Преобразуем сообщение из сокета в нужный формат
+      const convertedMessage = convertMessage(message)
+      setMessages(prev => [...prev, convertedMessage])
     }
 
     socketClient.on('new_message', handleNewMessage)
 
     return () => {
-      socketClient.emit('leave_chat', selectedUser.id)
+      socketClient.emit('leave_chat', recipientId)
       socketClient.off('new_message', handleNewMessage)
     }
-  }, [selectedUser.id])
+  }, [recipientId])
 
-  // Заменяем polling на сокеты
+  // Загрузка сообщений
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/messages/${selectedUser.id}`)
+        const response = await fetch(`/api/messages/${recipientId}`)
         if (!response.ok) throw new Error('Failed to fetch messages')
         const data = await response.json()
-        setMessages(data)
+        // Преобразуем даты в полученных сообщениях
+        const convertedMessages = data.map((msg: any) => ({
+          ...msg,
+          createdAt: new Date(msg.createdAt)
+        }))
+        setMessages(convertedMessages)
       } catch (error) {
         console.error('Error fetching messages:', error)
       } finally {
@@ -119,8 +157,7 @@ export function MessageList({ selectedUser }: MessageListProps) {
     }
 
     fetchMessages()
-    // Убираем интервал, так как теперь используем сокеты
-  }, [selectedUser.id])
+  }, [recipientId])
 
   // Предотвращаем автоскролл при первом рендере
   useEffect(() => {
@@ -146,20 +183,21 @@ export function MessageList({ selectedUser }: MessageListProps) {
       {/* Шапка чата */}
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={selectedUser.image || undefined} />
-            <AvatarFallback>{selectedUser.name?.[0]}</AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            src={session?.user?.image}
+            name={session?.user?.name}
+            className="h-10 w-10"
+          />
           <div>
-            <h3 className="font-medium">{selectedUser.name}</h3>
+            <h3 className="font-medium">{session?.user?.name}</h3>
             <div className="flex items-center gap-2">
-              {selectedUser.friendshipStatus === 'ACCEPTED' ? (
+              {friendshipStatus === 'ACCEPTED' ? (
                 <div className="flex items-center text-green-500 text-sm">
                   <UserCheck className="h-4 w-4 mr-1" />
                   <span>В друзьях</span>
                   <Heart className="h-4 w-4 ml-2 text-red-400" />
                 </div>
-              ) : selectedUser.friendshipStatus === 'PENDING' ? (
+              ) : friendshipStatus === 'PENDING' ? (
                 <span className="text-sm text-muted-foreground">
                   Запрос в друзья отправлен
                 </span>
@@ -210,12 +248,11 @@ export function MessageList({ selectedUser }: MessageListProps) {
                   isCurrentUser ? "ml-auto flex-row-reverse" : ""
                 )}
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={message.sender.image || undefined} />
-                  <AvatarFallback>
-                    {message.sender.name?.[0]?.toUpperCase() || '?'}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  src={message.sender.image}
+                  name={message.sender.name}
+                  className="h-8 w-8"
+                />
                 
                 <div
                   className={cn(
@@ -234,6 +271,7 @@ export function MessageList({ selectedUser }: MessageListProps) {
             )
           })
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Форма отправки сообщения */}
@@ -243,11 +281,12 @@ export function MessageList({ selectedUser }: MessageListProps) {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Введите сообщение..."
-            disabled={selectedUser.friendshipStatus !== 'ACCEPTED'}
+            disabled={friendshipStatus !== 'ACCEPTED'}
+            className="flex-1"
           />
           <Button 
             type="submit"
-            disabled={!newMessage.trim() || isSending || selectedUser.friendshipStatus !== 'ACCEPTED'}
+            disabled={!newMessage.trim() || isSending || friendshipStatus !== 'ACCEPTED'}
           >
             {isSending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -257,7 +296,7 @@ export function MessageList({ selectedUser }: MessageListProps) {
             Отправить
           </Button>
         </div>
-        {selectedUser.friendshipStatus !== 'ACCEPTED' && (
+        {friendshipStatus !== 'ACCEPTED' && (
           <p className="text-sm text-muted-foreground mt-2">
             Чтобы начать общение, добавьте пользователя в друзья
           </p>

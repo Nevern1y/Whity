@@ -1,67 +1,45 @@
 "use client"
 
-import Image from "next/image"
-import { useState, useEffect } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { User } from "lucide-react"
 
 interface UserAvatarProps {
-  src: string | null
+  src?: string | null
+  name?: string | null
   className?: string
-  size?: number
-  fallbackImage?: string
-  showFallback?: boolean
+  fallback?: string
+  size?: "sm" | "md" | "lg"
 }
 
 export function UserAvatar({ 
   src, 
-  className, 
-  size = 40,
-  fallbackImage = "/images/default_avatar.png",
-  showFallback = false
+  name, 
+  className,
+  fallback,
+  size = "md" 
 }: UserAvatarProps) {
-  const [error, setError] = useState(false)
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
-  
-  useEffect(() => {
-    // Обработка URL изображения
-    if (src) {
-      if (!src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('blob:')) {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-        setImageUrl(`${baseUrl}${src}`)
-      } else {
-        setImageUrl(src)
-      }
-    } else {
-      setImageUrl(fallbackImage)
-    }
-  }, [src, fallbackImage])
+  const sizeClasses = {
+    sm: "h-8 w-8",
+    md: "h-10 w-10",
+    lg: "h-20 w-20"
+  }
 
   return (
-    <div 
-      className={cn(
-        "relative aspect-square rounded-full overflow-hidden bg-muted",
-        "ring-2 ring-background shadow-md",
-        className
-      )}
-      style={{ width: size, height: size }}
-    >
-      {imageUrl && !error ? (
-        <Image
-          src={imageUrl}
-          alt="Avatar"
-          fill
-          sizes={`${size}px`}
-          className="object-cover"
-          onError={() => setError(true)}
-          priority
-          unoptimized={false}
+    <Avatar className={cn(
+      "relative",
+      sizeClasses[size],
+      className
+    )}>
+      {src && (
+        <AvatarImage 
+          src={src} 
+          alt={name || 'User avatar'} 
+          className="aspect-square object-cover"
         />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted">
-          <User className="h-1/2 w-1/2 text-muted-foreground" />
-        </div>
       )}
-    </div>
+      <AvatarFallback className="text-base font-semibold">
+        {fallback || name?.[0]?.toUpperCase() || 'U'}
+      </AvatarFallback>
+    </Avatar>
   )
 } 

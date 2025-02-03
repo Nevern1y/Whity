@@ -23,7 +23,11 @@
       "@/*": ["./*"]
     },
     "baseUrl": ".",
-    "types": ["node", "jest"],
+    "types": [
+      "node",
+      "jest",
+      "react"
+    ],
     "typeRoots": ["./node_modules/@types", "./types"]
   },
   "include": [

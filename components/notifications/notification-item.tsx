@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Check, Bell, Award, BookOpen, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import NotificationCard from "@/components/NotificationCard"
 
 const notificationIcons = {
   course: BookOpen,
@@ -30,6 +31,10 @@ export interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onRead, className }: NotificationItemProps) {
+  if (!notification || !notification.title || !notification.message) {
+    return null;
+  }
+
   const Icon = notificationIcons[notification.type]
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
     addSuffix: true,
@@ -42,64 +47,50 @@ export function NotificationItem({ notification, onRead, className }: Notificati
     }
   }
 
+  const handleAcceptFriend = async (id: string) => {
+    try {
+      const response = await fetch(`/api/friends/${id}/accept`, {
+        method: 'PATCH',
+      });
+      if (response.ok) {
+        // Обновить UI после успешного принятия
+        onRead(id);
+      }
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+    }
+  };
+
+  const handleRejectFriend = async (id: string) => {
+    try {
+      const response = await fetch(`/api/friends/${id}/reject`, {
+        method: 'PATCH',
+      });
+      if (response.ok) {
+        // Обновить UI после успешного отклонения
+        onRead(id);
+      }
+    } catch (error) {
+      console.error('Error rejecting friend request:', error);
+    }
+  };
+
   const content = (
-    <div 
+    <NotificationCard
+      notification={notification}
+      handleRead={handleRead}
+      onAccept={handleAcceptFriend}
+      onReject={handleRejectFriend}
       className={cn(
-        "flex items-start gap-4 p-4 transition-all rounded-lg",
-        "hover:bg-accent/50 card-hover",
-        notification.read 
-          ? "bg-background" 
-          : "bg-gradient-to-r from-primary/10 to-background border-l-2 border-primary",
+        "border-b last:border-b-0",
+        "hover:bg-accent/5",
+        "transition-colors duration-200",
         className
       )}
-      onClick={handleRead}
-    >
-      <div className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-full",
-        notification.read 
-          ? "bg-muted text-muted-foreground" 
-          : "bg-primary/10 text-primary"
-      )}>
-        <Icon className={cn(
-          "h-5 w-5",
-          notification.read ? "text-muted-foreground" : "text-primary"
-        )} />
-      </div>
-      <div className="flex-1 space-y-1">
-        <p className={cn(
-          "text-sm font-medium leading-none",
-          notification.read ? "text-muted-foreground" : "text-foreground"
-        )}>
-          {notification.title}
-        </p>
-        <p className={cn(
-          "text-sm text-muted-foreground",
-          "line-clamp-2"
-        )}>
-          {notification.message}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {timeAgo}
-        </p>
-      </div>
-      {!notification.read && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="shrink-0 text-primary"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRead(notification.id)
-          }}
-        >
-          <Check className="h-4 w-4" />
-          <span className="sr-only">Отметить как прочитанное</span>
-        </Button>
-      )}
-    </div>
+    />
   )
 
-  if (notification.link) {
+  if (notification.link && notification.title && notification.message) {
     return (
       <Link href={notification.link} className="block">
         {content}

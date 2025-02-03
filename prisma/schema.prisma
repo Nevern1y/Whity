@@ -58,6 +58,7 @@ model User {
   rating              Float             @default(0)
   uploadedFiles       UploadedFile[]
   uploads             Upload[]          @relation("UserUploads")
+  bio                 String?
 
   @@index([email])
   @@index([role])

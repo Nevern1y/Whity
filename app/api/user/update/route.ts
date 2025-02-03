@@ -5,10 +5,16 @@ import { z } from "zod"
 
 // Обновляем схему валидации
 const updateUserSchema = z.object({
-  name: z.string().min(2).optional(),
-  email: z.string().email().optional(),
+  name: z.preprocess(
+    (val) => (typeof val !== "string" || val.trim() === "" ? undefined : val),
+    z.string().min(2).optional()
+  ),
+  email: z.preprocess(
+    (val) => (typeof val !== "string" || val.trim() === "" ? undefined : val),
+    z.string().email().optional()
+  ),
   bio: z.string().max(500).optional(),
-  image: z.string().optional(), // Убираем .url() для поддержки локальных путей
+  image: z.string().nullable().optional(),
   preferences: z.any().optional(),
   settings: z.any().optional(),
 }).partial() // Делаем все поля опциональными

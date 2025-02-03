@@ -7,16 +7,23 @@ export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
-    const settings = await prisma.userSettings.findUnique({
-      where: { userId: session.user.id }
+    // Получаем актуальный объект пользователя с нужными полями
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        name: true,
+        email: true,
+        image: true,
+        bio: true,
+        // если у вас хранятся appearance, notifications, security - вы можете их вернуть тоже
+      }
     })
-
-    return NextResponse.json(settings)
+    return NextResponse.json(user || {})
   } catch (error) {
-    return NextResponse.json({ message: "Internal Error" }, { status: 500 })
+    console.error("Settings GET error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
@@ -34,6 +41,10 @@ export async function PUT(request: Request) {
       data: {
         name: data.profile.name,
         email: data.profile.email,
+        image: data.profile.image,
+        bio: data.profile.bio,
+        phone: data.profile.phone,
+        company: data.profile.company,
         settings: {
           upsert: {
             create: {

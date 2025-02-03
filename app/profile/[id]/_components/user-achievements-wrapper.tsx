@@ -1,17 +1,12 @@
-import { prisma } from "@/lib/prisma"
+"use client"
+
 import { UserAchievements } from "@/components/user-achievements"
 
 interface UserAchievementsWrapperProps {
   userId: string
+  data: any // Используйте правильный тип из вашей схемы
 }
 
-export default async function UserAchievementsWrapper({ userId }: UserAchievementsWrapperProps) {
-  const achievements = await prisma.userAchievement.findMany({
-    where: { userId },
-    include: {
-      achievement: true
-    }
-  })
-
-  return <UserAchievements achievements={achievements} />
+export default function UserAchievementsWrapper({ data }: UserAchievementsWrapperProps) {
+  return <UserAchievements achievements={data} />
 } 

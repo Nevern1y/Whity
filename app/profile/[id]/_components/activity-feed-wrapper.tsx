@@ -1,16 +1,12 @@
-import { prisma } from "@/lib/prisma"
+"use client"
+
 import { ActivityFeed } from "@/components/activity-feed"
 
 interface ActivityFeedWrapperProps {
   userId: string
+  data: any // Используйте правильный тип из вашей схемы
 }
 
-export default async function ActivityFeedWrapper({ userId }: ActivityFeedWrapperProps) {
-  const activities = await prisma.activity.findMany({
-    where: { userId },
-    orderBy: { createdAt: 'desc' },
-    take: 10
-  })
-
-  return <ActivityFeed activities={activities} />
+export default function ActivityFeedWrapper({ data }: ActivityFeedWrapperProps) {
+  return <ActivityFeed activities={data} />
 } 

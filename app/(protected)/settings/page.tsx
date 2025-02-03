@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { 
   User, Palette, Bell, Shield, Camera, Trash2, Loader2, 
   Mail, Phone, Building2, Globe, Languages, Eye, EyeOff,
@@ -34,7 +34,6 @@ import { AvatarUpload } from "@/components/profile/avatar-upload"
 import { useUserStore } from "@/lib/store/user-store"
 import { useRouter } from "next/navigation"
 import { ImageCropDialog } from "@/components/image-crop-dialog"
-import { toast } from "sonner"
 
 interface UserSettings {
   profile: {
@@ -119,6 +118,7 @@ export default function SettingsPage() {
   const router = useRouter()
   const { data: sessionData, update } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [showSaveOverlay, setShowSaveOverlay] = useState(false)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const { theme, setTheme } = useTheme()
@@ -271,6 +271,46 @@ export default function SettingsPage() {
     }
   }
 
+  // Обработчик сохранения настроек
+  const handleSaveSettings = async () => {
+    setIsLoading(true)
+    try {
+      // Предположим, что обновляются только настройки профиля.
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify((() => {
+          const payload = { ...userSettings.profile }
+          if (payload.image === null) {
+            delete payload.image
+          }
+          return payload
+        })())
+      })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        toast({
+          title: "Сохранения применены",
+          description: "Ваши настройки успешно обновлены."
+        })
+      } else {
+        toast({
+          title: "Ошибка",
+          description: data.error || "Не удалось сохранить настройки",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сохранить настройки",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Обработчик удаления аккаунта
   const handleDeleteAccount = async () => {
     try {
@@ -308,12 +348,13 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error('Failed to update profile')
 
       await update(userSettings.profile)
-      router.refresh()
-      
-      toast({
-        title: "Успех",
-        description: "Профиль успешно обновлен"
-      })
+      // Вместо стандартного toast вызываем оверлей
+      setShowSaveOverlay(true)
+      // Через 3 секунды прячем оверлей и обновляем страницу
+      setTimeout(() => {
+        setShowSaveOverlay(false)
+        router.refresh()
+      }, 3000)
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -501,6 +542,8 @@ export default function SettingsPage() {
                       <Label htmlFor="bio">О себе</Label>
                       <textarea
                         id="bio"
+                        value={userSettings.profile.bio}
+                        onChange={(e) => handleProfileChange('bio', e.target.value)}
                         className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
                         placeholder="Расскажите о себе..."
                       />
@@ -691,6 +734,35 @@ export default function SettingsPage() {
         imageSrc={selectedImage || ''}
         onCropComplete={handleImageChange}
       />
+
+      <AnimatePresence>
+        {showSaveOverlay && (
+          <motion.div
+            initial={{ opacity: 0, x: 50, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 50, scale: 0.95 }}
+            transition={{ duration: 1, ease: "easeInOut" }}
+            className="fixed top-20 right-5 z-50"
+          >
+            <div className="p-5 rounded-xl shadow-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-extrabold">Изменения сохранены</h2>
+                  <p className="mt-2 text-base">Ваш профиль обновлен</p>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => setShowSaveOverlay(false)}
+                  className="ml-4"
+                >
+                  Закрыть
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
