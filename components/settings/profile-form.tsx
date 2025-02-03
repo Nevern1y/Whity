@@ -3,114 +3,109 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
-import { Form } from "@/components/ui/form"
-import { AvatarUpload } from "@/components/profile/avatar-upload"
-import { useUserStore } from "@/lib/store/user-store"
-import { useSession } from "next-auth/react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useRouter } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { CalendarDays, Mail } from "lucide-react"
-import { format } from "date-fns"
-import { ru } from "date-fns/locale"
-import { ImageCropDialog } from "@/components/image-crop-dialog"
+
+interface ProfileFormData {
+  name: string
+  email: string
+  bio?: string
+  image?: string
+}
 
 interface ProfileFormProps {
   user: {
     id: string
-    name?: string | null
-    email?: string | null
-    image?: string | null
-    role?: string | null
-    createdAt?: Date | null
+    name: string | null
+    email: string | null
+    image: string | null
+    bio?: string | null
   }
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {
-  const { update } = useSession()
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const setUserImage = useUserStore((state) => state.setUserImage)
-  const [cropDialogOpen, setCropDialogOpen] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
-  const form = useForm({
+  const { register, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
     defaultValues: {
-      image: user?.image || ""
+      name: user.name || "",
+      email: user.email || "",
+      bio: user.bio || "",
+      image: user.image || ""
     }
   })
 
-  const handleImageSelect = (imageUrl: string) => {
-    setSelectedImage(imageUrl)
-    setCropDialogOpen(true)
-  }
-
-  const handleImageChange = async (url: string) => {
+  const onSubmit = async (data: ProfileFormData) => {
     try {
-      form.setValue('image', url)
-      setUserImage(url)
-      await update({ image: url })
+      setIsLoading(true)
       
-      const response = await fetch('/api/user/update', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: url })
+      const response = await fetch("/api/user/update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       })
 
-      if (!response.ok) throw new Error('Failed to update profile')
-      
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update profile")
+      }
+
+      toast.success("Профиль обновлен")
       router.refresh()
-      toast.success('Фото профиля обновлено')
-      setCropDialogOpen(false)
     } catch (error) {
-      toast.error('Ошибка при обновлении фото профиля')
+      console.error("Update error:", error)
+      toast.error(error instanceof Error ? error.message : "Не удалось обновить профиль")
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <Form {...form}>
-      <Card className="border-none shadow-none">
-        <CardContent className="space-y-8 pt-4">
-          <div className="space-y-6">
-            <div className="flex justify-center">
-              <AvatarUpload
-                initialImage={user.image}
-                onImageChange={handleImageSelect}
-              />
-            </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Имя</Label>
+        <Input
+          id="name"
+          {...register("name", { required: true })}
+          disabled={isLoading}
+        />
+        {errors.name && (
+          <p className="text-sm text-red-500">Это поле обязательно</p>
+        )}
+      </div>
 
-            <div className="space-y-4 text-center">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  {user.name}
-                </h2>
-                <Badge variant="secondary" className="mt-2">
-                  {user.role === 'ADMIN' ? 'Администратор' : 'Пользователь'}
-                </Badge>
-              </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          {...register("email", { required: true })}
+          disabled={isLoading}
+        />
+        {errors.email && (
+          <p className="text-sm text-red-500">Введите корректный email</p>
+        )}
+      </div>
 
-              <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  {user.email}
-                </div>
-                {user.createdAt && (
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4" />
-                    На платформе с {format(new Date(user.createdAt), 'dd MMMM yyyy', { locale: ru })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        <Label htmlFor="bio">О себе</Label>
+        <Textarea
+          id="bio"
+          {...register("bio")}
+          disabled={isLoading}
+        />
+      </div>
 
-      <ImageCropDialog
-        isOpen={cropDialogOpen}
-        onClose={() => setCropDialogOpen(false)}
-        imageSrc={selectedImage || ''}
-        onCropComplete={handleImageChange}
-      />
-    </Form>
+      <Button type="submit" disabled={isLoading}>
+        {isLoading ? "Сохранение..." : "Сохранить изменения"}
+      </Button>
+    </form>
   )
 } 

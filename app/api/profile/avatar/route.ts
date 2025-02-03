@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (!file) {
       return NextResponse.json({ 
         success: false, 
-        message: "No file uploaded" 
+        message: "No file provided" 
       }, { status: 400 })
     }
 
@@ -63,7 +63,10 @@ export async function POST(request: Request) {
     // Обновляем аватар пользователя
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: { image: fileUrl }
+      data: { 
+        image: fileUrl,
+        updatedAt: new Date()
+      }
     })
 
     // Создаем запись об активности

@@ -12,7 +12,7 @@ const Avatar = React.forwardRef<
   <AvatarPrimitive.Root
     ref={ref}
     className={cn(
-      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-background shadow-sm",
       className
     )}
     {...props}
@@ -23,28 +23,21 @@ Avatar.displayName = AvatarPrimitive.Root.displayName
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
->(({ className, src, alt = "", style, ...props }, ref) => {
+>(({ className, src, alt = "", ...props }, ref) => {
   // Используем дефолтный аватар, если src не предоставлен
   const defaultAvatarUrl = "/images/default_avatar.png"
   const imageUrl = src || defaultAvatarUrl
 
-  // Форматируем URL для локальных путей
-  const formattedUrl = imageUrl.startsWith('/') && !imageUrl.startsWith('blob:')
-    ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${imageUrl}`
-    : imageUrl
-
-  const { width, height, ...imageProps } = props
-
   return (
     <div className="relative h-full w-full">
       <Image
-        src={formattedUrl}
+        src={imageUrl}
         alt={alt}
         fill
         className={cn("aspect-square h-full w-full object-cover", className)}
         sizes="(max-width: 40px) 100vw, 40px"
         priority
-        {...imageProps}
+        unoptimized={false}
       />
     </div>
   )
