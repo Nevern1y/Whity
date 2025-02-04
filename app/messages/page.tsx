@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,7 @@ export default function MessagesPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()
+  const debouncedSearch = useDebounce(searchQuery, 300)
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -144,79 +145,40 @@ export default function MessagesPage() {
     }
   }
 
-  const fetchFriends = async () => {
+  const fetchFriends = async (query: string = "") => {
     try {
       setIsLoading(true)
-      setError(null)
-      const response = await fetch(`/api/users/search?q=${searchQuery}`)
-      
-      if (!response.ok) {
-        throw new Error(
-          response.status === 401 
-            ? 'Пожалуйста, войдите в систему' 
-            : 'Ошибка при поиске пользователей'
-        )
-      }
-      
+      const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
       const data = await response.json()
-      const usersWithStatus = data.map((user: any) => ({
-        ...user,
-        friendshipStatus: user.friendshipStatus || 'NONE',
-        isIncoming: user.isIncoming ?? false,
-      }))
-      setFriends(usersWithStatus)
+      setFriends(data)
     } catch (error) {
-      console.error('Error:', error)
-      setError(error instanceof Error ? error.message : 'Произошла ошибка')
+      console.error("Failed to fetch friends", error)
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Используем debounce для поиска
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery) fetchFriends()
-    }, 300)
-
-    return () => clearTimeout(delayDebounceFn)
-  }, [searchQuery])
-
-  useEffect(() => {
-    // Если есть userId в URL, находим и выбираем этого пользователя
-    const userId = searchParams?.get('userId')
-    if (userId && friends.length > 0) {
-      const user = friends.find(friend => friend.id === userId)
-      if (user) {
-        setSelectedUser(user)
-      }
+    if (debouncedSearch !== undefined) {
+      fetchFriends(debouncedSearch)
     }
-    // Если userId есть, но пользователь не найден в списке друзей,
-    // можно загрузить информацию о пользователе
-    else if (userId) {
+  }, [debouncedSearch])
+
+  // Отдельный эффект для начальной загрузки по userId из URL
+  useEffect(() => {
+    const userId = searchParams?.get('userId')
+    if (userId && friends.length === 0) {
       fetchFriends()
     }
-  }, [searchParams, friends])
+  }, [searchParams])
 
-  const handleRemoveFriend = async (friendId: string) => {
-    try {
-      const res = await fetch(`/api/friends/${friendId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setFriends(friends.filter(friend => friend.id !== friendId));
-      }
-    } catch (error) {
-      console.error("Failed to remove friend", error);
-    }
-  }
-
-  const handleUserSelect = (user: User) => {
+  const handleUserSelect = useCallback((user: User) => {
     setSelectedUser(user)
-    // Проверяем статус дружбы
     if (user.friendshipStatus === 'ACCEPTED') {
       socketClient.emit('join_chat', user.id)
     }
-  }
+  }, [])
 
   return (
     <div className="container py-8">
@@ -257,8 +219,10 @@ export default function MessagesPage() {
                   >
                     <div className="flex items-start gap-3">
                       <UserAvatar
-                        src={friend.image}
-                        name={friend.name}
+                        user={{
+                          name: friend.name,
+                          image: friend.image
+                        }}
                         className="h-10 w-10"
                       />
                       <div className="flex-1 min-w-0">
@@ -324,7 +288,8 @@ export default function MessagesPage() {
               recipient={{
                 id: selectedUser.id,
                 name: selectedUser.name,
-                image: selectedUser.image
+                image: selectedUser.image,
+                email: selectedUser.email
               }}
               onClose={() => setSelectedUser(null)}
             />
@@ -337,5 +302,22 @@ export default function MessagesPage() {
       </div>
     </div>
   )
+}
+
+// Хук для debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
 }
 

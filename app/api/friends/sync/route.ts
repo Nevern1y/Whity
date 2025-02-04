@@ -1,11 +1,15 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { Friendship } from "@prisma/client"
+import { Friendship, User } from "@prisma/client"
 
 type FriendshipWithUsers = Friendship & {
   sender: { id: string } | null
   receiver: { id: string } | null
+}
+
+interface UserIdOnly {
+  id: string
 }
 
 export async function GET() {
@@ -15,56 +19,48 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    // Получаем все активные дружеские отношения
+    // Сначала получаем существующих пользователей
+    const existingUsers = await prisma.user.findMany({
+      select: { id: true }
+    })
+    const userIds = existingUsers.map((u: UserIdOnly) => u.id)
+
     const friendships = await prisma.friendship.findMany({
       where: {
         OR: [
-          { senderId: session.user.id },
-          { receiverId: session.user.id }
-        ],
-        status: {
-          in: ['ACCEPTED', 'PENDING']
-        }
+          { 
+            senderId: session.user.id,
+            sender: { id: { in: userIds } },
+            receiver: { id: { in: userIds } }
+          },
+          { 
+            receiverId: session.user.id,
+            sender: { id: { in: userIds } },
+            receiver: { id: { in: userIds } }
+          }
+        ]
       },
       include: {
         sender: {
-          select: { id: true }
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
         },
         receiver: {
-          select: { id: true }
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
         }
       }
     })
 
-    // Фильтруем удаленных пользователей
-    const validFriendships = friendships.filter(
-      (f: FriendshipWithUsers) => f.sender && f.receiver
-    )
-
-    // Если есть разница, обновляем статусы
-    if (friendships.length !== validFriendships.length) {
-      await Promise.all(
-        friendships
-          .filter((f: FriendshipWithUsers) => !f.sender || !f.receiver)
-          .map((f: FriendshipWithUsers) => 
-            prisma.friendship.delete({
-              where: { id: f.id }
-            })
-          )
-      )
-    }
-
-    const userId = session.user.id
-
-    // Возвращаем актуальные данные
-    return NextResponse.json({
-      pendingCount: validFriendships.filter(
-        (f: FriendshipWithUsers) => f.status === 'PENDING' && f.receiverId === userId
-      ).length,
-      totalFriends: validFriendships.filter(
-        (f: FriendshipWithUsers) => f.status === 'ACCEPTED'
-      ).length
-    })
+    return NextResponse.json(friendships)
   } catch (error) {
     console.error("[FRIENDS_SYNC]", error)
     return new NextResponse("Internal Error", { status: 500 })

@@ -25,7 +25,15 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, src, alt = "", ...props }, ref) => {
-  if (!src) return null;
+  const [error, setError] = React.useState(false);
+
+  if (!src || error) {
+    return (
+      <AvatarFallback>
+        {alt?.charAt(0)?.toUpperCase() || '?'}
+      </AvatarFallback>
+    );
+  }
 
   return (
     <div className="relative h-full w-full">
@@ -36,6 +44,7 @@ const AvatarImage = React.forwardRef<
         className={cn("aspect-square h-full w-full object-cover", className)}
         sizes="(max-width: 40px) 100vw, 40px"
         priority
+        onError={() => setError(true)}
       />
     </div>
   )

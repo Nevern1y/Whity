@@ -53,6 +53,14 @@ export async function middleware(request: NextRequest) {
     response.headers.set('Access-Control-Allow-Origin', '*')
   }
 
+  // Обработка статических файлов
+  if (request.nextUrl.pathname.startsWith('/uploads/')) {
+    // Устанавливаем правильные заголовки для изображений
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+    response.headers.set('Content-Type', 'image/jpeg') // или другой тип в зависимости от файла
+    return response
+  }
+
   return response
 }
 
@@ -64,7 +72,8 @@ export const config = {
     '/settings',
     '/profile',
     '/messages',
-    '/login'
+    '/login',
+    '/uploads/:path*'  // Добавляем обработку uploads
   ],
 }
 

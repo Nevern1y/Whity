@@ -9,20 +9,23 @@ export async function POST(request: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ 
-        success: false, 
-        message: "Unauthorized" 
-      }, { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 })
+    }
+
+    // Проверяем существование пользователя перед обновлением
+    const existingUser = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    })
+
+    if (!existingUser) {
+      return new NextResponse("User not found", { status: 404 })
     }
 
     const formData = await request.formData()
     const file = formData.get("file") as File
     
     if (!file) {
-      return NextResponse.json({ 
-        success: false, 
-        message: "No file provided" 
-      }, { status: 400 })
+      return new NextResponse("No file uploaded", { status: 400 })
     }
 
     // Проверяем тип файла
@@ -62,7 +65,9 @@ export async function POST(request: Request) {
 
     // Обновляем аватар пользователя
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { 
+        id: session.user.id,
+      },
       data: { 
         image: fileUrl,
         updatedAt: new Date()
@@ -87,9 +92,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("[AVATAR_UPLOAD_ERROR]", error)
-    return NextResponse.json({ 
-      success: false, 
-      message: "Error uploading avatar" 
-    }, { status: 500 })
+    return new NextResponse("Internal Error", { status: 500 })
   }
 } 

@@ -2,22 +2,61 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import React from "react"
 
 interface UserAvatarProps {
-  src?: string | null
-  name?: string | null
+  user?: {
+    image?: string | null
+    name?: string | null
+  }
   className?: string
   fallback?: string
   size?: "sm" | "md" | "lg"
 }
 
-export function UserAvatar({ 
-  src, 
-  name, 
-  className,
-  fallback,
-  size = "md" 
-}: UserAvatarProps) {
+export function UserAvatar({ user, ...props }: UserAvatarProps) {
+  const [imageExists, setImageExists] = React.useState<boolean | null>(null)
+  const fallbackImage = '/images/default-avatar.png'
+
+  React.useEffect(() => {
+    setImageExists(null)
+    
+    if (!user?.image) {
+      setImageExists(false)
+      return
+    }
+
+    if (user.image.startsWith('/uploads/')) {
+      const filename = user.image.split('/').pop()
+      if (!filename) {
+        setImageExists(false)
+        return
+      }
+
+      const cacheKey = `image-exists-${filename}`
+      const cached = sessionStorage.getItem(cacheKey)
+      
+      if (cached !== null) {
+        setImageExists(cached === 'true')
+        return
+      }
+
+      fetch(`/api/uploads/check?file=${filename}`)
+        .then(res => res.json())
+        .then(data => {
+          const exists = !!data.exists
+          setImageExists(exists)
+          sessionStorage.setItem(cacheKey, exists.toString())
+        })
+        .catch(() => {
+          setImageExists(false)
+          sessionStorage.setItem(cacheKey, 'false')
+        })
+    } else {
+      setImageExists(true)
+    }
+  }, [user?.image])
+
   const sizeClasses = {
     sm: "h-8 w-8",
     md: "h-10 w-10",
@@ -25,22 +64,26 @@ export function UserAvatar({
   }
 
   const getFallbackText = () => {
-    if (fallback) return fallback
-    if (name) return name[0].toUpperCase()
+    if (props.fallback) return props.fallback
+    if (user?.name) return user.name[0].toUpperCase()
     return 'U'
   }
 
+  const imageSrc = React.useMemo(() => {
+    if (imageExists === null) return user?.image || undefined
+    if (!imageExists) return fallbackImage
+    return user?.image || undefined
+  }, [imageExists, user?.image, fallbackImage])
+
   return (
     <Avatar className={cn(
-      sizeClasses[size],
-      className
+      sizeClasses[props.size || "md"],
+      props.className
     )}>
-      {src && (
-        <AvatarImage 
-          src={src} 
-          alt={name || 'User avatar'} 
-        />
-      )}
+      <AvatarImage 
+        src={imageSrc}
+        alt={user?.name || 'User'} 
+      />
       <AvatarFallback>
         {getFallbackText()}
       </AvatarFallback>

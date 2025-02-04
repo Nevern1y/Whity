@@ -49,29 +49,21 @@ function convertMessage(message: ChatMessage, currentRecipientId: string): Messa
 
 interface MessageListProps {
   recipientId: string
-  friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
-  onClose?: () => void
-  recipient?: {
+  friendshipStatus: string
+  recipient: {
     id: string
     name: string | null
     image: string | null
+    email: string | null
   }
+  onClose: () => void
 }
 
-export function MessageList({ 
-  recipientId, 
-  friendshipStatus = 'NONE',
-  recipient,
-  onClose 
-}: MessageListProps) {
+export function MessageList({ recipientId, friendshipStatus, recipient, onClose }: MessageListProps) {
   const { data: session } = useSession()
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSending, setIsSending] = useState(false)
-  const [isAddingFriend, setIsAddingFriend] = useState(false)
-  const listRef = useRef<HTMLDivElement>(null)
-  const isFirstRenderRef = useRef(true)
+  const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -79,292 +71,278 @@ export function MessageList({
   }
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  // Функция отправки запроса в друзья
-  const handleAddFriend = async () => {
-    try {
-      setIsAddingFriend(true)
-      const response = await fetch('/api/friends', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: recipientId })
-      })
-
-      if (!response.ok) throw new Error('Failed to send friend request')
-      toast.success('Запрос в друзья отправлен')
-    } catch (error) {
-      toast.error('Не удалось отправить запрос')
-    } finally {
-      setIsAddingFriend(false)
-    }
-  }
-
-  // Функция отправки сообщения
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMessage.trim() || isSending || !session?.user?.id) return
-
-    try {
-      setIsSending(true)
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: newMessage,
-          recipientId
-        })
-      })
-
-      if (!response.ok) throw new Error('Failed to send message')
-      
-      const message: Message = await response.json()
-      setMessages(prev => [...prev, message])
-      setNewMessage("")
-    } catch (error) {
-      toast.error('Не удалось отправить сообщение')
-    } finally {
-      setIsSending(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!recipientId || friendshipStatus !== 'ACCEPTED') return
-
+    fetchMessages()
     const socket = socketClient.getSocket()
-    if (!socket) return
-
-    socketClient.emit('join_chat', recipientId)
     
-    const handleNewMessage = (message: ChatMessage) => {
-      if (message.senderId === recipientId || message.senderId === session?.user?.id) {
-        const convertedMessage = convertMessage(message, recipientId)
-        setMessages(prev => [...prev, convertedMessage])
-      }
+    if (socket) {
+      socket.on('new_message', handleNewMessage)
     }
-
-    socketClient.on('new_message', handleNewMessage)
 
     return () => {
-      socketClient.emit('leave_chat', recipientId)
-      socketClient.off('new_message', handleNewMessage)
-    }
-  }, [recipientId, friendshipStatus, session?.user?.id])
-
-  // Загрузка сообщений
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch(`/api/messages/${recipientId}`)
-        if (!response.ok) throw new Error('Failed to fetch messages')
-        const data = await response.json()
-        // Преобразуем даты в полученных сообщениях
-        const convertedMessages = data.map((msg: any) => ({
-          ...msg,
-          createdAt: new Date(msg.createdAt)
-        }))
-        setMessages(convertedMessages)
-      } catch (error) {
-        console.error('Error fetching messages:', error)
-      } finally {
-        setIsLoading(false)
+      if (socket) {
+        socket.off('new_message', handleNewMessage)
       }
     }
-
-    fetchMessages()
   }, [recipientId])
 
-  // Предотвращаем автоскролл при первом рендере
-  useEffect(() => {
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false
-      return
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch(`/api/messages?receiverId=${recipientId}`)
+      const data = await response.json()
+      setMessages(data)
+      setTimeout(scrollToBottom, 100)
+    } catch (error) {
+      console.error("Error fetching messages:", error)
+      toast.error("Не удалось загрузить сообщения")
     }
-
-    // Скроллим только если пользователь уже находится внизу
-    const list = listRef.current
-    if (list) {
-      const isAtBottom = 
-        list.scrollHeight - list.scrollTop === list.clientHeight
-
-      if (isAtBottom) {
-        list.scrollTop = list.scrollHeight
-      }
-    }
-  }, [messages])
-
-  // Если пользователи не друзья, показываем соответствующий интерфейс
-  if (friendshipStatus !== 'ACCEPTED') {
-    return (
-      <div className="flex flex-col h-full bg-background">
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <UserAvatar
-              src={recipient?.image}
-              name={recipient?.name}
-              size="sm"
-            />
-            <div className="flex flex-col">
-              <span className="font-medium">{recipient?.name || 'Пользователь'}</span>
-            </div>
-          </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-accent rounded-full transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="text-center space-y-4">
-            {friendshipStatus === 'PENDING' ? (
-              <>
-                <p className="text-muted-foreground">
-                  Дождитесь принятия заявки, чтобы начать общение
-                </p>
-                <Button variant="ghost" disabled>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Ожидание принятия заявки
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground">
-                  Добавьте пользователя в друзья, чтобы начать общение
-                </p>
-                <AddFriendButton 
-                  targetUserId={recipientId}
-                  initialStatus={friendshipStatus}
-                />
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    )
   }
 
-  // Обновим условие отображения формы отправки сообщений
-  const canSendMessages = friendshipStatus === 'ACCEPTED'
+  const handleNewMessage = (message: any) => {
+    setMessages(prev => [...prev, message])
+    setTimeout(scrollToBottom, 100)
+  }
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMessage.trim() || isLoading) return
+
+    try {
+      setIsLoading(true)
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: newMessage.trim(),
+          receiverId: recipientId
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Failed to send message")
+      }
+
+      const message = await response.json()
+      setMessages(prev => [...prev, message])
+      setNewMessage("")
+      setTimeout(scrollToBottom, 100)
+    } catch (error) {
+      console.error("Error sending message:", error)
+      toast.error("Не удалось отправить сообщение")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Шапка чата */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
-          <UserAvatar
-            src={session?.user?.image || null}
-            name={session?.user?.name || null}
-            size="sm"
-          />
-          <div className="flex flex-col">
-            <span className="font-medium">{session?.user?.name || 'Пользователь'}</span>
-            <UserProfilePopover
-              user={{
-                id: recipientId,
-                name: session?.user?.name || null,
-                image: session?.user?.image || null,
-                role: session?.user?.role || undefined,
-                coursesCompleted: session?.user?.coursesCompleted,
-                achievementsCount: session?.user?.achievementsCount
-              }}
-              friendshipStatus={friendshipStatus}
-              trigger={
-                <button className="text-xs text-muted-foreground hover:underline text-left">
-                  Посмотреть профиль
-                </button>
-              }
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-card shadow-sm">
+        <div 
+          className="flex items-center gap-3 cursor-pointer group relative"
+          onClick={() => window.open(`/profile/${recipient.id}`, '_blank')}
+        >
+          <div className="relative">
+            <UserAvatar
+              user={recipient}
+              className="h-10 w-10 transition-transform group-hover:scale-105"
             />
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500" />
+          </div>
+          <div className="group-hover:opacity-80 transition-opacity">
+            <p className="font-medium line-clamp-1 flex items-center gap-2">
+              {recipient.name}
+              <span className="text-xs text-muted-foreground">
+                (Открыть профиль)
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {friendshipStatus === 'ACCEPTED' ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  В сети
+                </span>
+              ) : 'Нет доступа'}
+            </p>
+          </div>
+
+          {/* Quick Profile Preview - улучшенный дизайн */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <div className="bg-popover text-popover-foreground rounded-lg shadow-lg w-80 border overflow-hidden">
+              {/* Градиентный фон */}
+              <div className="h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-background relative">
+                {/* Аватар */}
+                <div className="absolute left-1/2 -bottom-12 -translate-x-1/2">
+                  <div className="p-1.5 bg-background rounded-full ring-4 ring-background">
+                    <UserAvatar
+                      user={recipient}
+                      className="h-20 w-20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Информация о пользователе */}
+              <div className="pt-14 pb-4 px-4">
+                <div className="text-center space-y-1">
+                  <h3 className="font-semibold text-lg">{recipient.name}</h3>
+                  <p className="text-sm text-muted-foreground">{recipient.email || 'Email не указан'}</p>
+                </div>
+
+                {/* Статус и информация */}
+                <div className="mt-4 flex justify-center gap-6">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-sm">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                      </span>
+                      <span className="text-muted-foreground">Онлайн</span>
+                    </div>
+                  </div>
+                  {friendshipStatus === 'ACCEPTED' && (
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1.5 text-sm">
+                        <UserCheck className="h-4 w-4 text-primary" />
+                        <span className="text-muted-foreground">В друзьях</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Разделитель */}
+                <div className="my-4 border-t border-border/40" />
+
+                {/* Действия */}
+                <div className="flex gap-2 px-2">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      window.open(`/profile/${recipient.id}`, '_blank')
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Профиль
+                  </Button>
+                  {friendshipStatus !== 'ACCEPTED' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Здесь логика добавления в друзья
+                      }}
+                    >
+                      <Heart className="h-4 w-4 mr-2" />
+                      Добавить
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <button 
-          onClick={onClose}
-          className="p-2 hover:bg-accent rounded-full transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
+
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose} 
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Список сообщений */}
-      <div 
-        ref={listRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
-      >
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <p>Нет сообщений</p>
-          </div>
-        ) : (
-          messages.map((message) => {
-            const isCurrentUser = message.senderId === session?.user?.id
-            return (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn(
-                  "flex items-start gap-2 max-w-[80%]",
-                  isCurrentUser ? "ml-auto flex-row-reverse" : ""
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/20">
+        {messages.map((message, index) => {
+          const isCurrentUser = message.senderId === session?.user?.id
+          const showAvatar = !isCurrentUser && 
+            (!messages[index - 1] || messages[index - 1].senderId !== message.senderId)
+
+          return (
+            <div
+              key={message.id}
+              className={cn(
+                "flex items-end gap-2",
+                isCurrentUser ? "justify-end" : "justify-start"
+              )}
+            >
+              <div className={cn("flex items-end gap-2 max-w-[75%]", 
+                isCurrentUser ? "flex-row-reverse" : "flex-row"
+              )}>
+                {!isCurrentUser && showAvatar && (
+                  <UserAvatar
+                    user={message.sender}
+                    className="h-6 w-6 mb-1"
+                  />
                 )}
-              >
-                <UserAvatar
-                  src={message.sender.image}
-                  name={message.sender.name}
-                  size="sm"
-                />
+                {!isCurrentUser && !showAvatar && (
+                  <div className="w-6" /> // Placeholder для выравнивания
+                )}
                 <div
                   className={cn(
-                    "rounded-2xl px-4 py-2",
-                    isCurrentUser
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                    "px-3 py-2 rounded-2xl break-words",
+                    isCurrentUser ? 
+                      "bg-primary text-primary-foreground rounded-br-none" : 
+                      "bg-muted rounded-bl-none",
+                    "shadow-sm"
                   )}
                 >
-                  <p>{message.content}</p>
-                  <span className="text-xs opacity-70 mt-1 block">
-                    {format(new Date(message.createdAt), "HH:mm", { locale: ru })}
-                  </span>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <p className={cn(
+                    "text-[10px] mt-1",
+                    isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                  )}>
+                    {format(new Date(message.createdAt), 'HH:mm')}
+                  </p>
                 </div>
-              </motion.div>
-            )
-          })
-        )}
+              </div>
+            </div>
+          )
+        })}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Форма отправки */}
-      <form onSubmit={handleSendMessage} className="p-4 border-t">
-        <div className="flex items-center gap-2">
+      {/* Input */}
+      <div className="p-4 border-t bg-card">
+        <form onSubmit={sendMessage} className="flex gap-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Введите сообщение..."
-            disabled={!canSendMessages}
-            className="flex-1"
+            placeholder={
+              friendshipStatus === 'ACCEPTED'
+                ? "Введите сообщение..."
+                : "Добавьте пользователя в друзья для отправки сообщений"
+            }
+            disabled={friendshipStatus !== 'ACCEPTED' || isLoading}
+            className="bg-muted/50"
           />
-          <button 
-            type="submit"
-            disabled={!newMessage.trim() || isSending || !canSendMessages}
-            className={cn(
-              "p-2 rounded-full transition-colors",
-              "hover:bg-primary hover:text-primary-foreground",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
+          <Button 
+            type="submit" 
+            size="icon"
+            disabled={friendshipStatus !== 'ACCEPTED' || !newMessage.trim() || isLoading}
+            className="shrink-0"
           >
-            {isSending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4" />
             )}
-          </button>
-        </div>
-      </form>
+          </Button>
+        </form>
+      </div>
     </div>
   )
 } 
