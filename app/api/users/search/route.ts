@@ -25,6 +25,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const userId = session.user.id
+
     const { searchParams } = new URL(request.url)
     const query = searchParams.get("q")
     const role = searchParams.get("role")
@@ -41,7 +43,7 @@ export async function GET(request: Request) {
           { email: { contains: query } }
         ],
         NOT: {
-          id: session.user.id
+          id: userId
         },
         ...(role && { role })
       },
@@ -49,16 +51,16 @@ export async function GET(request: Request) {
         sentFriendships: {
           where: {
             OR: [
-              { receiverId: session.user.id },
-              { senderId: session.user.id }
+              { receiverId: userId },
+              { senderId: userId }
             ]
           }
         },
         receivedFriendships: {
           where: {
             OR: [
-              { receiverId: session.user.id },
-              { senderId: session.user.id }
+              { receiverId: userId },
+              { senderId: userId }
             ]
           }
         }
@@ -84,11 +86,15 @@ export async function GET(request: Request) {
 
     // Сортируем результаты
     const sortedUsers = formattedUsers.sort((user: User) => {
-      const friendships = [...users.find(u => u.id === user.id)?.sentFriendships || [], 
-                          ...users.find(u => u.id === user.id)?.receivedFriendships || []]
+      const friendships = [
+        ...users.find(u => u.id === user.id)?.sentFriendships || [], 
+        ...users.find(u => u.id === user.id)?.receivedFriendships || []
+      ]
+      
       const friendship = friendships.find((f: Friendship) => 
-        f.senderId === session.user.id || f.receiverId === session.user.id
+        f.senderId === userId || f.receiverId === userId
       )
+      
       return friendship?.status === 'ACCEPTED' ? -1 : 1
     })
 

@@ -24,9 +24,14 @@ export function UserAvatar({
     lg: "h-20 w-20"
   }
 
+  const getFallbackText = () => {
+    if (fallback) return fallback
+    if (name) return name[0].toUpperCase()
+    return 'U'
+  }
+
   return (
     <Avatar className={cn(
-      "relative",
       sizeClasses[size],
       className
     )}>
@@ -34,11 +39,10 @@ export function UserAvatar({
         <AvatarImage 
           src={src} 
           alt={name || 'User avatar'} 
-          className="aspect-square object-cover"
         />
       )}
-      <AvatarFallback className="text-base font-semibold">
-        {fallback || name?.[0]?.toUpperCase() || 'U'}
+      <AvatarFallback>
+        {getFallbackText()}
       </AvatarFallback>
     </Avatar>
   )

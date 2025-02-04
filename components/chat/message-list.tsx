@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useSession } from "next-auth/react"
-import { UserPlus, UserCheck, Heart, Send, Loader2 } from "lucide-react"
+import { UserPlus, UserCheck, Heart, Send, Loader2, X } from "lucide-react"
 import { toast } from "sonner"
 import { socketClient } from "@/lib/socket-client"
 import { UserAvatar } from "@/components/user-avatar"
+import { AddFriendButton } from "@/components/add-friend-button"
 import type { ChatMessage } from "@/types/socket"
+import Link from "next/link"
+import { UserProfilePopover } from "@/components/user-profile-popover"
 
 // Общий интерфейс для сообщений
 interface BaseMessage {
@@ -33,12 +36,12 @@ interface Message extends BaseMessage {
 }
 
 // Функция для преобразования даты из строки в Date
-function convertMessage(message: ChatMessage): Message {
+function convertMessage(message: ChatMessage, currentRecipientId: string): Message {
   return {
     id: message.id,
     content: message.content,
     senderId: message.senderId,
-    recipientId: message.recipientId,
+    recipientId: currentRecipientId,
     createdAt: new Date(message.createdAt),
     sender: message.sender
   }
@@ -47,9 +50,20 @@ function convertMessage(message: ChatMessage): Message {
 interface MessageListProps {
   recipientId: string
   friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
+  onClose?: () => void
+  recipient?: {
+    id: string
+    name: string | null
+    image: string | null
+  }
 }
 
-export function MessageList({ recipientId, friendshipStatus = 'NONE' }: MessageListProps) {
+export function MessageList({ 
+  recipientId, 
+  friendshipStatus = 'NONE',
+  recipient,
+  onClose 
+}: MessageListProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
@@ -116,15 +130,18 @@ export function MessageList({ recipientId, friendshipStatus = 'NONE' }: MessageL
   }
 
   useEffect(() => {
+    if (!recipientId || friendshipStatus !== 'ACCEPTED') return
+
     const socket = socketClient.getSocket()
     if (!socket) return
 
     socketClient.emit('join_chat', recipientId)
     
     const handleNewMessage = (message: ChatMessage) => {
-      // Преобразуем сообщение из сокета в нужный формат
-      const convertedMessage = convertMessage(message)
-      setMessages(prev => [...prev, convertedMessage])
+      if (message.senderId === recipientId || message.senderId === session?.user?.id) {
+        const convertedMessage = convertMessage(message, recipientId)
+        setMessages(prev => [...prev, convertedMessage])
+      }
     }
 
     socketClient.on('new_message', handleNewMessage)
@@ -133,7 +150,7 @@ export function MessageList({ recipientId, friendshipStatus = 'NONE' }: MessageL
       socketClient.emit('leave_chat', recipientId)
       socketClient.off('new_message', handleNewMessage)
     }
-  }, [recipientId])
+  }, [recipientId, friendshipStatus, session?.user?.id])
 
   // Загрузка сообщений
   useEffect(() => {
@@ -178,47 +195,97 @@ export function MessageList({ recipientId, friendshipStatus = 'NONE' }: MessageL
     }
   }, [messages])
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Шапка чата */}
-      <div className="p-4 border-b flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <UserAvatar
-            src={session?.user?.image}
-            name={session?.user?.name}
-            className="h-10 w-10"
-          />
-          <div>
-            <h3 className="font-medium">{session?.user?.name}</h3>
-            <div className="flex items-center gap-2">
-              {friendshipStatus === 'ACCEPTED' ? (
-                <div className="flex items-center text-green-500 text-sm">
-                  <UserCheck className="h-4 w-4 mr-1" />
-                  <span>В друзьях</span>
-                  <Heart className="h-4 w-4 ml-2 text-red-400" />
-                </div>
-              ) : friendshipStatus === 'PENDING' ? (
-                <span className="text-sm text-muted-foreground">
-                  Запрос в друзья отправлен
-                </span>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAddFriend}
-                  disabled={isAddingFriend}
-                >
-                  {isAddingFriend ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <UserPlus className="h-4 w-4 mr-2" />
-                  )}
-                  Добавить в друзья
-                </Button>
-              )}
+  // Если пользователи не друзья, показываем соответствующий интерфейс
+  if (friendshipStatus !== 'ACCEPTED') {
+    return (
+      <div className="flex flex-col h-full bg-background">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-3">
+            <UserAvatar
+              src={recipient?.image}
+              name={recipient?.name}
+              size="sm"
+            />
+            <div className="flex flex-col">
+              <span className="font-medium">{recipient?.name || 'Пользователь'}</span>
             </div>
           </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-accent rounded-full transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="text-center space-y-4">
+            {friendshipStatus === 'PENDING' ? (
+              <>
+                <p className="text-muted-foreground">
+                  Дождитесь принятия заявки, чтобы начать общение
+                </p>
+                <Button variant="ghost" disabled>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Ожидание принятия заявки
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">
+                  Добавьте пользователя в друзья, чтобы начать общение
+                </p>
+                <AddFriendButton 
+                  targetUserId={recipientId}
+                  initialStatus={friendshipStatus}
+                />
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Обновим условие отображения формы отправки сообщений
+  const canSendMessages = friendshipStatus === 'ACCEPTED'
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      {/* Шапка чата */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            src={session?.user?.image || null}
+            name={session?.user?.name || null}
+            size="sm"
+          />
+          <div className="flex flex-col">
+            <span className="font-medium">{session?.user?.name || 'Пользователь'}</span>
+            <UserProfilePopover
+              user={{
+                id: recipientId,
+                name: session?.user?.name || null,
+                image: session?.user?.image || null,
+                role: session?.user?.role || undefined,
+                coursesCompleted: session?.user?.coursesCompleted,
+                achievementsCount: session?.user?.achievementsCount
+              }}
+              friendshipStatus={friendshipStatus}
+              trigger={
+                <button className="text-xs text-muted-foreground hover:underline text-left">
+                  Посмотреть профиль
+                </button>
+              }
+            />
+          </div>
+        </div>
+        <button 
+          onClick={onClose}
+          className="p-2 hover:bg-accent rounded-full transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Список сообщений */}
@@ -228,41 +295,39 @@ export function MessageList({ recipientId, friendshipStatus = 'NONE' }: MessageL
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <p>Начните общение первым</p>
+            <p>Нет сообщений</p>
           </div>
         ) : (
-          messages.map((message, index) => {
+          messages.map((message) => {
             const isCurrentUser = message.senderId === session?.user?.id
-            
             return (
               <motion.div
                 key={message.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
-                  "flex items-end gap-2 max-w-[80%]",
+                  "flex items-start gap-2 max-w-[80%]",
                   isCurrentUser ? "ml-auto flex-row-reverse" : ""
                 )}
               >
                 <UserAvatar
                   src={message.sender.image}
                   name={message.sender.name}
-                  className="h-8 w-8"
+                  size="sm"
                 />
-                
                 <div
                   className={cn(
-                    "rounded-2xl p-4",
+                    "rounded-2xl px-4 py-2",
                     isCurrentUser
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted"
                   )}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p>{message.content}</p>
                   <span className="text-xs opacity-70 mt-1 block">
                     {format(new Date(message.createdAt), "HH:mm", { locale: ru })}
                   </span>
@@ -271,36 +336,34 @@ export function MessageList({ recipientId, friendshipStatus = 'NONE' }: MessageL
             )
           })
         )}
-        <div ref={messagesEndRef} />
       </div>
 
-      {/* Форма отправки сообщения */}
+      {/* Форма отправки */}
       <form onSubmit={handleSendMessage} className="p-4 border-t">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Введите сообщение..."
-            disabled={friendshipStatus !== 'ACCEPTED'}
+            disabled={!canSendMessages}
             className="flex-1"
           />
-          <Button 
+          <button 
             type="submit"
-            disabled={!newMessage.trim() || isSending || friendshipStatus !== 'ACCEPTED'}
+            disabled={!newMessage.trim() || isSending || !canSendMessages}
+            className={cn(
+              "p-2 rounded-full transition-colors",
+              "hover:bg-primary hover:text-primary-foreground",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
           >
             {isSending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Send className="h-4 w-4 mr-2" />
+              <Send className="h-5 w-5" />
             )}
-            Отправить
-          </Button>
+          </button>
         </div>
-        {friendshipStatus !== 'ACCEPTED' && (
-          <p className="text-sm text-muted-foreground mt-2">
-            Чтобы начать общение, добавьте пользователя в друзья
-          </p>
-        )}
       </form>
     </div>
   )

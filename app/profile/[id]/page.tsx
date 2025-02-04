@@ -18,6 +18,13 @@ import type { User, Activity, Achievement } from "@/types/prisma"
 import ProfileContent from './_components/profile-content'
 import { Badge } from "@/components/ui/badge"
 import { ProfilePageContent } from "./_components/profile-page-content"
+import { FriendActionButton } from "@/components/friend-action-button"
+import { FriendshipValidator } from "@/lib/friendship-validator"
+import { ExtendedFriendshipStatus } from "@/lib/constants"
+import { 
+  FriendshipStatusBadge,
+  ProfilePageContent as NewProfilePageContent 
+} from "@/components"
 
 interface ProfilePageProps {
   params: {
@@ -25,11 +32,30 @@ interface ProfilePageProps {
   }
 }
 
-export type FriendshipStatus = 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SELF'
+export type ProfileFriendshipStatus = ExtendedFriendshipStatus | 'SELF'
 
-async function getProfileData(userId: string) {
-  const userData = await prisma.user.findUnique({
-    where: { id: userId },
+async function getFriendshipStatus(userId: string, targetUserId: string): Promise<ProfileFriendshipStatus> {
+  const friendship = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { senderId: userId, receiverId: targetUserId },
+        { senderId: targetUserId, receiverId: userId }
+      ]
+    }
+  })
+
+  return (friendship?.status as ProfileFriendshipStatus) || 'NONE'
+}
+
+export default async function ProfilePage({ params }: ProfilePageProps) {
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
+
+  // Проверяем, существует ли пользователь с таким ID
+  const user = await prisma.user.findFirst({
+    where: {
+      id: params.id,
+    },
     include: {
       authoredCourses: true,
       enrolledCourses: true,
@@ -53,42 +79,30 @@ async function getProfileData(userId: string) {
     }
   })
 
-  if (!userData) return null
-
-  return userData
-}
-
-async function getFriendshipStatus(userId: string, targetUserId: string): Promise<FriendshipStatus> {
-  const friendship = await prisma.friendship.findFirst({
-    where: {
-      OR: [
-        { senderId: userId, receiverId: targetUserId },
-        { senderId: targetUserId, receiverId: userId }
-      ]
-    }
-  })
-
-  return (friendship?.status as FriendshipStatus) || 'NONE'
-}
-
-export default async function ProfilePage({ params }: ProfilePageProps) {
-  const session = await auth()
-  if (!session?.user?.id) redirect("/login")
-
-  const profileData = await getProfileData(params.id)
-  if (!profileData) notFound()
+  if (!user) {
+    redirect('/friends')
+  }
 
   const isOwnProfile = session.user.id === params.id
-  const initialFriendshipStatus = isOwnProfile ? 'SELF' : 
-    await getFriendshipStatus(session.user.id, params.id)
+  const friendshipStatus = await FriendshipValidator.getFriendshipStatus(
+    session.user.id,
+    params.id
+  )
 
   return (
     <ProfilePageContent 
       params={params}
-      profileData={profileData}
+      profileData={user}
       isOwnProfile={isOwnProfile}
-      initialFriendshipStatus={initialFriendshipStatus}
-    />
+      initialFriendshipStatus={friendshipStatus}
+    >
+      {!isOwnProfile && (
+        <FriendActionButton 
+          userId={params.id}
+          initialStatus={friendshipStatus}
+        />
+      )}
+    </ProfilePageContent>
   )
 }
 

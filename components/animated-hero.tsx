@@ -32,18 +32,18 @@ export function AnimatedHero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <Button asChild size="lg" className="gap-2">
-            <Link href="/courses">
+          <Link href="/courses">
+            <Button size="lg" className="flex items-center gap-2">
               <Rocket className="h-4 w-4" />
               <span className="whitespace-nowrap">Перейти к обучению</span>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="gap-2">
-            <Link href="/about">
+            </Button>
+          </Link>
+          <Link href="/about">
+            <Button variant="outline" size="lg" className="flex items-center gap-2">
               <Info className="h-4 w-4" />
               <span className="whitespace-nowrap">Узнать больше о платформе</span>
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </div>

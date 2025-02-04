@@ -3,23 +3,28 @@ import { getServerSession } from "next-auth"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Server } from "socket.io"
-import type { Notification } from "@/lib/notifications"
+import type { Notification } from "@/types"
 
 export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
     const notifications = await prisma.notification.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: 'desc' }
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
     })
 
     return NextResponse.json(notifications)
   } catch (error) {
-    return NextResponse.json({ message: "Internal Error" }, { status: 500 })
+    console.error("[NOTIFICATIONS_GET]", error)
+    return new NextResponse("Internal Error", { status: 500 })
   }
 }
 

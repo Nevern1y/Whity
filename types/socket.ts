@@ -1,15 +1,16 @@
 import { Server as NetServer } from "http"
 import { NextApiResponse } from "next"
 import { Server as SocketIOServer } from "socket.io"
-import { Socket as ClientSocket } from "socket.io-client"
-import { Server } from "socket.io"
+import { Socket } from "socket.io-client"
+import type { Socket as NetSocket } from "net"
+import { FriendshipStatus } from "@prisma/client"
+import { ExtendedFriendshipStatus } from "@/lib/constants"
 
 export interface ChatMessage {
   id: string
   content: string
   senderId: string
-  recipientId: string
-  createdAt: string
+  createdAt: string | Date
   sender: {
     name: string | null
     image: string | null
@@ -40,34 +41,74 @@ export interface ServerToClientEvents {
   connect: () => void
   disconnect: () => void
   connect_error: (error: Error) => void
-  "notification:new": (notification: FullNotification) => void
+  "notification:new": (notification: any) => void
+  friend_request: (data: {
+    senderId: string
+    status: FriendshipStatus
+  }) => void
+  friend_request_response: (data: {
+    friendshipId: string
+    status: FriendshipStatus
+  }) => void
+  friend_request_cancelled: (data: {
+    friendshipId: string
+    senderId: string
+  }) => void
+  friendship_update: (data: {
+    type: string
+    friendshipId: string
+  }) => void
 }
 
 export interface ClientToServerEvents {
-  join_chat: (userId: string) => void
-  leave_chat: (userId: string) => void
-  send_message: (message: { receiverId: string; content: string }) => void
+  join_chat: (recipientId: string) => void
+  leave_chat: (recipientId: string) => void
+  send_message: (message: Omit<ChatMessage, 'id' | 'createdAt'>) => void
+  join_user: (userId: string) => void
+  leave_user: (userId: string) => void
+  friend_request: (data: {
+    targetUserId: string
+    status: FriendshipStatus
+  }) => void
+  friend_request_response: (data: {
+    senderId: string
+    friendshipId: string
+    status: FriendshipStatus
+  }) => void
+  cancel_friend_request: (friendshipId: string) => void
+  friendship_update: (data: {
+    type: string
+    friendshipId: string
+  }) => void
 }
 
 export interface InterServerEvents {
-  // Определите события между серверами здесь
+  ping: () => void
 }
 
 export interface SocketData {
   userId: string
-  // Определите пользовательские данные сокета здесь
 }
 
-export type SocketClient = typeof ClientSocket
+export type ServerType = SocketIOServer<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>
 
-export type SocketCallback<T extends keyof ServerToClientEvents> = Parameters<ServerToClientEvents[T]>[0]
+export type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>
+
+export interface SocketServer extends NetServer {
+  io?: ServerType
+}
+
+export interface ResponseSocket {
+  server: SocketServer
+}
 
 export type NextApiResponseServerIO = NextApiResponse & {
-  socket: any & {
-    server: NetServer & {
-      io: Server<ClientToServerEvents, ServerToClientEvents>
-    }
-  }
+  socket: ResponseSocket
 }
 
 export type SocketIOResponse = NextApiResponseServerIO 

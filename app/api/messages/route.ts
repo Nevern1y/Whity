@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createNotification } from "@/lib/notifications"
+import { getIO } from "@/lib/socket-server"
 
 export async function GET(request: Request) {
   try {
@@ -74,6 +75,21 @@ export async function POST(req: Request) {
 
     const { receiverId, content } = await req.json()
 
+    // Проверяем статус дружбы
+    const friendship = await prisma.friendship.findFirst({
+      where: {
+        OR: [
+          { senderId: session.user.id, receiverId },
+          { senderId: receiverId, receiverId: session.user.id }
+        ],
+        status: 'ACCEPTED'
+      }
+    })
+
+    if (!friendship) {
+      return new NextResponse("You can only send messages to friends", { status: 403 })
+    }
+
     const message = await prisma.message.create({
       data: {
         content,
@@ -85,14 +101,20 @@ export async function POST(req: Request) {
       }
     })
 
-    await createNotification({
-      userId: receiverId,
-      title: "Новое сообщение",
-      message: `${message.sender.name} отправил вам сообщение`,
-      type: "message",
-      link: `/messages/${session.user.id}`,
-      metadata: { messageId: message.id }
-    })
+    // Отправляем сообщение через сокет
+    const io = getIO()
+    if (io) {
+      io.to(receiverId).emit('new_message', {
+        id: message.id,
+        content: message.content,
+        senderId: message.senderId,
+        createdAt: message.createdAt,
+        sender: {
+          name: message.sender.name,
+          image: message.sender.image
+        }
+      })
+    }
 
     return NextResponse.json(message)
   } catch (error) {

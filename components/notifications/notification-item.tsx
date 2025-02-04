@@ -4,10 +4,11 @@ import React from 'react'
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
 import { Button } from "@/components/ui/button"
-import { Check, Bell, Award, BookOpen, MessageSquare } from "lucide-react"
+import { Check, Bell, Award, BookOpen, MessageSquare, Trophy, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import NotificationCard from "@/components/NotificationCard"
+import { Notification } from "@/types"
 
 const notificationIcons = {
   course: BookOpen,
@@ -16,26 +17,33 @@ const notificationIcons = {
   news: Bell,
 } as const
 
-export interface NotificationItemProps {
-  notification: {
-    id: string
-    title: string
-    message: string
-    type: keyof typeof notificationIcons
-    read: boolean
-    createdAt: Date
-    link?: string
-  }
-  onRead: (id: string) => void
-  className?: string
+interface NotificationItemProps {
+  notification: Notification
+  onAction: () => void
 }
 
-export function NotificationItem({ notification, onRead, className }: NotificationItemProps) {
+export function NotificationItem({ notification, onAction }: NotificationItemProps) {
   if (!notification || !notification.title || !notification.message) {
     return null;
   }
 
-  const Icon = notificationIcons[notification.type]
+  const getIcon = () => {
+    switch (notification.type) {
+      case 'course':
+        return <BookOpen className="h-4 w-4" />
+      case 'achievement':
+        return <Trophy className="h-4 w-4" />
+      case 'message':
+        return <MessageSquare className="h-4 w-4" />
+      case 'news':
+        return <Bell className="h-4 w-4" />
+      case 'friend_request':
+        return <UserPlus className="h-4 w-4" />
+      default:
+        return <Bell className="h-4 w-4" />
+    }
+  }
+
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
     addSuffix: true,
     locale: ru
@@ -43,7 +51,7 @@ export function NotificationItem({ notification, onRead, className }: Notificati
 
   const handleRead = () => {
     if (!notification.read) {
-      onRead(notification.id)
+      onAction()
     }
   }
 
@@ -54,7 +62,7 @@ export function NotificationItem({ notification, onRead, className }: Notificati
       });
       if (response.ok) {
         // Обновить UI после успешного принятия
-        onRead(id);
+        onAction();
       }
     } catch (error) {
       console.error('Error accepting friend request:', error);
@@ -68,7 +76,7 @@ export function NotificationItem({ notification, onRead, className }: Notificati
       });
       if (response.ok) {
         // Обновить UI после успешного отклонения
-        onRead(id);
+        onAction();
       }
     } catch (error) {
       console.error('Error rejecting friend request:', error);
@@ -84,8 +92,7 @@ export function NotificationItem({ notification, onRead, className }: Notificati
       className={cn(
         "border-b last:border-b-0",
         "hover:bg-accent/5",
-        "transition-colors duration-200",
-        className
+        "transition-colors duration-200"
       )}
     />
   )

@@ -7,6 +7,8 @@ import { Providers } from "@/components/providers"
 import { AchievementPopup } from "@/components/achievements/achievement-popup"
 import { useUserStore } from "@/lib/store/user-store"
 import { auth } from "@/lib/auth"
+import { SocketProvider } from "@/components/providers/socket-provider"
+import { RedirectHandler } from "@/components/providers/redirect-handler"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -31,12 +33,14 @@ export default async function RootLayout({
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
+          <RedirectHandler />
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
           <AchievementPopup />
+          <SocketProvider />
         </Providers>
       </body>
     </html>

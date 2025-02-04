@@ -16,7 +16,8 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { Logo } from "@/components/ui/logo"
 import { useUserStore } from "@/lib/store/user-store"
 import { useSyncUserImage } from "@/hooks/use-sync-user-image"
-import NotificationCard from "@/components/notificationCard"
+import NotificationCard from "@/components/NotificationCard"
+import { FriendsButton } from "@/components/friends/friends-button"
 
 export function Header() {
   const pathname = usePathname()
@@ -115,29 +116,36 @@ export function Header() {
 
         <div className="flex items-center gap-1.5 ml-auto">
           {session?.user ? (
-            <>
+            <div className="flex items-center gap-2">
               <NotificationsButton />
               <ThemeToggle />
+              <FriendsButton />
               <UserNav user={session.user} />
-            </>
+            </div>
           ) : (
-            <>
+            <div className="flex items-center gap-2">
               <ThemeToggle />
               {!isMobile ? (
                 <>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href="/auth/login">Войти</Link>
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link href="/auth/register">Регистрация</Link>
-                  </Button>
+                  <Link href="/auth/login">
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                      Войти
+                    </Button>
+                  </Link>
+                  <Link href="/auth/register">
+                    <Button size="sm" className="flex items-center gap-2">
+                      Регистрация
+                    </Button>
+                  </Link>
                 </>
               ) : (
-                <Button asChild size="sm">
-                  <Link href="/auth/login">Войти</Link>
-                </Button>
+                <Link href="/auth/login">
+                  <Button size="sm" className="flex items-center gap-2">
+                    Войти
+                  </Button>
+                </Link>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

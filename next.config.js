@@ -14,6 +14,10 @@ const nextConfig = {
       test: /\.(png|jpg|gif|jpeg|svg)$/i,
       type: 'asset/resource'
     })
+    config.externals.push({
+      "utf-8-validate": "commonjs utf-8-validate",
+      bufferutil: "commonjs bufferutil"
+    })
     return config
   },
   async headers() {
@@ -27,6 +31,14 @@ const nextConfig = {
           },
         ],
       },
+    ]
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/socket.io/:path*',
+        destination: '/api/socket.io/:path*'
+      }
     ]
   }
 }

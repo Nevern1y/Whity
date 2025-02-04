@@ -3,9 +3,10 @@ import { AnimatedHero } from "@/components/animated-hero"
 import { StatsSection } from "@/components/stats-section"
 import { WaveInfoSection } from "@/components/wave-info-section"
 import { FeaturesGrid } from "@/components/features-grid"
-import { ArrowRight, BookOpen, Users, Trophy, Target, Lightbulb, Rocket } from "lucide-react"
+import { ArrowRight, BookOpen, Users, Trophy, Target, Lightbulb, Rocket, Info } from "lucide-react"
 import Link from "next/link"
 import { InnovationIcon } from "@/components/icons/innovation"
+import { Button } from "@/components/ui/button"
 
 const features = [
   {

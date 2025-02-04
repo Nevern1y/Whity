@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
-// Опционально: укажите пути, для которых должен срабатывать middleware
+// Обновляем конфигурацию matcher
 export const config = {
   matcher: [
     '/admin/:path*',
@@ -64,9 +64,7 @@ export const config = {
     '/settings',
     '/profile',
     '/messages',
-    '/login',
-    '/api/socketio',
-    '/api/socketio/(.*)'
+    '/login'
   ],
 }
 

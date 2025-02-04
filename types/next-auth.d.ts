@@ -1,5 +1,6 @@
 import "next-auth"
 import { JWT } from "next-auth/jwt"
+import { DefaultSession } from "next-auth"
 
 export type UserRole = "USER" | "ADMIN"
 
@@ -13,10 +14,12 @@ declare module "next-auth" {
   }
 
   interface Session {
-    user: User & {
+    user?: {
       id: string
-      role: UserRole
-    }
+      role?: string
+      coursesCompleted?: number
+      achievementsCount?: number
+    } & DefaultSession["user"]
     expires: string
   }
 }

@@ -8,8 +8,9 @@ import { BookOpen, Trophy, Star, Users2 } from "lucide-react"
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { AddFriendButton } from "@/components/add-friend-button"
-import type { FriendshipStatus } from "../page"
+import type { ProfileFriendshipStatus } from "../page"
 import ProfileContent from './profile-content'
+import { FriendsList } from "./friends-list"
 
 interface Friend {
   id: string;
@@ -25,43 +26,6 @@ interface Friendship {
   status: string;
   sender?: Friend;
   receiver?: Friend;
-}
-
-function FriendsList({ 
-  sentFriendships,
-  receivedFriendships 
-}: { 
-  sentFriendships: Friendship[],
-  receivedFriendships: Friendship[] 
-}) {
-  const friends = [...sentFriendships, ...receivedFriendships]
-    .filter(f => f.status === 'ACCEPTED')
-    .map(f => f.sender || f.receiver)
-    .filter((friend): friend is Friend => friend !== undefined)
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {friends.map(friend => (
-        <Card key={friend.id}>
-          <CardContent className="flex items-center gap-4 p-4">
-            <Avatar>
-              <AvatarImage src={friend.image || ''} />
-              <AvatarFallback>{friend.name?.charAt(0) || '?'}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-medium">{friend.name || 'Без имени'}</p>
-              <p className="text-sm text-muted-foreground">{friend.email || 'Email не указан'}</p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {friends.length === 0 && (
-        <div className="col-span-full text-center text-muted-foreground py-8">
-          Список друзей пуст
-        </div>
-      )}
-    </div>
-  )
 }
 
 interface Progress {
@@ -91,17 +55,21 @@ function StatCard({ icon: Icon, title, value }: { icon: any; title: string; valu
   )
 }
 
-export function ProfilePageContent({ 
+interface ProfilePageContentProps {
+  params: { id: string }
+  profileData: any
+  isOwnProfile: boolean
+  initialFriendshipStatus: ProfileFriendshipStatus
+  children?: React.ReactNode
+}
+
+export function ProfilePageContent({
   params,
   profileData,
   isOwnProfile,
-  initialFriendshipStatus
-}: {
-  params: { id: string }
-  profileData: any // Замените any на правильный тип из вашей схемы
-  isOwnProfile: boolean
-  initialFriendshipStatus: FriendshipStatus
-}) {
+  initialFriendshipStatus,
+  children
+}: ProfilePageContentProps) {
   const [currentFriendshipStatus, setCurrentFriendshipStatus] = useState(initialFriendshipStatus)
 
   useEffect(() => {
@@ -203,6 +171,7 @@ export function ProfilePageContent({
           </TabsContent>
         )}
       </Tabs>
+      {children}
     </div>
   )
 } 

@@ -7,9 +7,28 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
+import { Notification } from "@/types"
 
 export function NotificationsList() {
   const { notifications, markAsRead, loading } = useNotifications()
+  const [notificationsState, setNotificationsState] = useState<Notification[]>([])
+
+  useEffect(() => {
+    // Загружаем уведомления при монтировании
+    fetchNotifications()
+  }, [])
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch('/api/notifications')
+      if (!response.ok) throw new Error('Failed to fetch notifications')
+      const data = await response.json()
+      setNotificationsState(data)
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    }
+  }
 
   if (loading) {
     return (
@@ -49,27 +68,16 @@ export function NotificationsList() {
   }
 
   return (
-    <AnimatePresence mode="popLayout">
-      {notifications.map((notification, index) => (
-        <motion.div
-          key={notification.id}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.2, delay: index * 0.1 }}
-        >
-          <NotificationItem
+    <ScrollArea className="h-[300px]">
+      <div className="space-y-4 p-4">
+        {notificationsState.map((notification: Notification) => (
+          <NotificationItem 
+            key={notification.id} 
             notification={notification}
-            onRead={markAsRead}
-            className={cn(
-              "border-b last:border-b-0",
-              "hover:bg-accent/5",
-              "transition-colors duration-200",
-              "rounded-lg my-2 p-3"
-            )}
+            onAction={fetchNotifications}
           />
-        </motion.div>
-      ))}
-    </AnimatePresence>
+        ))}
+      </div>
+    </ScrollArea>
   )
 } 

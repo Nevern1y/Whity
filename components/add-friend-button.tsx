@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { UserPlus, UserCheck, UserMinus, Loader2, MessageSquare } from "lucide-react"
+import { UserPlus, UserCheck, UserMinus, Loader2, MessageSquare, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
   Tooltip,
@@ -23,7 +23,7 @@ interface AddFriendButtonProps {
   initialStatus: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SELF'
 }
 
-export function AddFriendButton({ targetUserId, initialStatus }: AddFriendButtonProps) {
+export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFriendButtonProps) {
   const [status, setStatus] = useState(initialStatus)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -41,15 +41,17 @@ export function AddFriendButton({ targetUserId, initialStatus }: AddFriendButton
         body: JSON.stringify({ targetUserId })
       })
 
-      if (response.ok) {
-        setStatus('PENDING')
-        window.dispatchEvent(new CustomEvent('friendship-updated', { 
-          detail: { targetUserId, status: 'PENDING' } 
-        }))
-        toast.success('Запрос в друзья отправлен')
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send friend request')
       }
+      
+      setStatus('PENDING')
+      toast.success('Запрос в друзья отправлен')
     } catch (error) {
-      toast.error('Не удалось отправить запрос')
+      console.error('Error adding friend:', error)
+      toast.error(error instanceof Error ? error.message : 'Не удалось отправить запрос')
     } finally {
       setIsLoading(false)
     }
@@ -170,17 +172,24 @@ export function AddFriendButton({ targetUserId, initialStatus }: AddFriendButton
 
   return (
     <Button
-      variant="ghost"
-      size="sm"
+      variant="secondary"
+      className="flex-1"
       onClick={handleAddFriend}
-      disabled={isLoading}
+      disabled={status !== 'NONE' || isLoading}
     >
       {isLoading ? (
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : initialStatus === 'PENDING' ? (
+        <>
+          <Clock className="h-4 w-4 mr-2" />
+          Запрос отправлен
+        </>
       ) : (
-        <UserPlus className="h-4 w-4 mr-2" />
+        <>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Добавить в друзья
+        </>
       )}
-      Добавить в друзья
     </Button>
   )
 } 

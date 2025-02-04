@@ -17,10 +17,8 @@ export function FriendRequestActions({ friendshipId }: FriendRequestActionsProps
   const handleAction = async (action: 'accept' | 'reject') => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/friends', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friendshipId, action })
+      const response = await fetch(`/api/friends/${friendshipId}/${action}`, {
+        method: 'PATCH'
       })
 
       if (!response.ok) throw new Error('Failed to process request')
@@ -42,7 +40,7 @@ export function FriendRequestActions({ friendshipId }: FriendRequestActionsProps
         onClick={() => handleAction('accept')}
         disabled={isLoading}
       >
-        <Check className="mr-2 h-4 w-4" />
+        <Check className="h-4 w-4 mr-2" />
         Принять
       </Button>
       <Button
@@ -52,7 +50,7 @@ export function FriendRequestActions({ friendshipId }: FriendRequestActionsProps
         onClick={() => handleAction('reject')}
         disabled={isLoading}
       >
-        <X className="mr-2 h-4 w-4" />
+        <X className="h-4 w-4 mr-2" />
         Отклонить
       </Button>
     </div>

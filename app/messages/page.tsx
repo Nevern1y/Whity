@@ -12,6 +12,13 @@ import { MessageList } from "@/components/chat/message-list"
 import { cn } from "@/lib/utils"
 import { UserAvatar } from "@/components/user-avatar"
 import { useSearchParams } from "next/navigation"
+import { socketClient } from "@/lib/socket-client"
+import { toast } from "react-hot-toast"
+
+interface FriendshipData {
+  id: string
+  status: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
+}
 
 interface User {
   id: string
@@ -20,6 +27,8 @@ interface User {
   image: string | null
   friendshipStatus: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
   isIncoming?: boolean
+  sentFriendships?: FriendshipData[]
+  receivedFriendships?: FriendshipData[]
 }
 
 export default function MessagesPage() {
@@ -31,6 +40,47 @@ export default function MessagesPage() {
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const socket = socketClient.getSocket()
+    if (!socket) return
+
+    const userId = session.user.id
+    socket.emit('join_user', userId)
+
+    const handleFriendRequest = (data: { senderId: string; status: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' }) => {
+      setFriends(prev => prev.map(friend => 
+        friend.id === data.senderId 
+          ? { ...friend, friendshipStatus: data.status }
+          : friend
+      ))
+    }
+
+    const handleFriendRequestResponse = (data: { friendshipId: string; status: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' }) => {
+      setFriends(prev => prev.map(friend => {
+        const friendship = friend.sentFriendships?.[0] || friend.receivedFriendships?.[0]
+        if (friendship?.id === data.friendshipId) {
+          return { ...friend, friendshipStatus: data.status }
+        }
+        return friend
+      }))
+
+      if (data.status === 'ACCEPTED') {
+        toast.success('Запрос в друзья принят')
+      }
+    }
+
+    socket.on('friend_request', handleFriendRequest)
+    socket.on('friend_request_response', handleFriendRequestResponse)
+
+    return () => {
+      socket.emit('leave_user', userId)
+      socket.off('friend_request', handleFriendRequest)
+      socket.off('friend_request_response', handleFriendRequestResponse)
+    }
+  }, [session?.user?.id])
+
   const handleAddFriend = async (friendId: string) => {
     try {
       const res = await fetch('/api/friends', {
@@ -39,15 +89,29 @@ export default function MessagesPage() {
         body: JSON.stringify({ targetUserId: friendId })
       })
       
-      if (res.ok) {
-        setFriends(friends.map(friend => 
-          friend.id === friendId 
-            ? { ...friend, friendshipStatus: 'PENDING', isIncoming: false }
-            : friend
-        ))
+      if (!res.ok) {
+        const error = await res.json()
+        toast.error(error.error || 'Не удалось добавить в друзья')
+        return
       }
+
+      const data = await res.json()
+      
+      setFriends(prev => prev.map(friend => 
+        friend.id === friendId 
+          ? { 
+              ...friend, 
+              friendshipStatus: 'PENDING',
+              sentFriendships: [{ id: data.id, status: 'PENDING' }],
+              receivedFriendships: []
+            }
+          : friend
+      ))
+      
+      toast.success('Запрос в друзья отправлен')
     } catch (error) {
       console.error("Failed to add friend", error)
+      toast.error('Не удалось добавить в друзья')
     }
   }
 
@@ -146,6 +210,14 @@ export default function MessagesPage() {
     }
   }
 
+  const handleUserSelect = (user: User) => {
+    setSelectedUser(user)
+    // Проверяем статус дружбы
+    if (user.friendshipStatus === 'ACCEPTED') {
+      socketClient.emit('join_chat', user.id)
+    }
+  }
+
   return (
     <div className="container py-8">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -175,7 +247,7 @@ export default function MessagesPage() {
                 {friends.map((friend) => (
                   <div
                     key={friend.id}
-                    onClick={() => friend.name && setSelectedUser(friend)}
+                    onClick={() => friend.name && handleUserSelect(friend)}
                     className={cn(
                       "p-3 rounded-lg transition-all duration-200",
                       friend.name ? "hover:bg-muted cursor-pointer" : "pointer-events-none opacity-50",
@@ -244,55 +316,21 @@ export default function MessagesPage() {
         </Card>
 
         {/* Область чата */}
-        <Card className="p-4 md:col-span-3 h-[700px] flex flex-col">
+        <Card className="md:col-span-3 h-[700px]">
           {selectedUser ? (
-            selectedUser.friendshipStatus === 'ACCEPTED' ? (
-              <>
-                <div className="flex items-center gap-3 pb-4 border-b">
-                  <UserAvatar
-                    src={selectedUser.image}
-                    name={selectedUser.name}
-                    className="h-10 w-10"
-                  />
-                  <div>
-                    <p className="font-medium">{selectedUser.name}</p>
-                  </div>
-                </div>
-                <MessageList 
-                  recipientId={selectedUser.id} 
-                  friendshipStatus={selectedUser.friendshipStatus}
-                />
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-4">
-                <MessageSquare className="h-12 w-12 mb-2" />
-                <p className="text-lg">Дождитесь принятия заявки, чтобы начать общение</p>
-                {selectedUser.friendshipStatus === 'NONE' && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handleAddFriend(selectedUser.id)}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Добавить в друзья
-                  </Button>
-                )}
-                {selectedUser.friendshipStatus === 'PENDING' && !selectedUser.isIncoming && (
-                  <p className="text-sm">Заявка в друзья отправлена</p>
-                )}
-                {selectedUser.friendshipStatus === 'PENDING' && selectedUser.isIncoming && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handleAcceptFriend(selectedUser.id)}
-                  >
-                    Принять заявку в друзья
-                  </Button>
-                )}
-              </div>
-            )
+            <MessageList
+              recipientId={selectedUser.id}
+              friendshipStatus={selectedUser.friendshipStatus}
+              recipient={{
+                id: selectedUser.id,
+                name: selectedUser.name,
+                image: selectedUser.image
+              }}
+              onClose={() => setSelectedUser(null)}
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mb-2" />
-              <p>Выберите пользователя для начала общения</p>
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Выберите чат для начала общения
             </div>
           )}
         </Card>
