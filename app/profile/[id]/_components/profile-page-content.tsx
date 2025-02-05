@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, Trophy, Star, Users2 } from "lucide-react"
@@ -118,7 +118,6 @@ export function ProfilePageContent({
                   alt={profileData.name || ''} 
                   className="h-full w-full object-cover"
                 />
-                <AvatarFallback>{profileData.name?.charAt(0) || 'U'}</AvatarFallback>
               </Avatar>
             </div>
             

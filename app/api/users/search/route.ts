@@ -71,16 +71,16 @@ export async function GET(request: Request) {
     }
 
     // Если есть поисковый запрос, ищем пользователей
-    const users = await prisma.user.findMany({
-      where: {
-        NOT: { id: userId },
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } }
-        ]
-      },
-      take: 10
-    })
+    const users = await prisma.$queryRaw`
+      SELECT id, name, email, image 
+      FROM users 
+      WHERE id != ${userId}
+      AND (
+        LOWER(name) LIKE LOWER(${`%${query}%`}) 
+        OR LOWER(email) LIKE LOWER(${`%${query}%`})
+      )
+      LIMIT 10
+    `
 
     return NextResponse.json(users)
   } catch (error) {

@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
+import { Level } from "@prisma/client"
 import { 
   Select, 
   SelectContent, 
@@ -22,8 +25,69 @@ import {
   Upload
 } from "lucide-react"
 
+interface CourseData {
+  title: string
+  description: string
+  level: Level
+  duration: string
+  image: string
+  published?: boolean
+}
+
 export default function CreateCoursePage() {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [courseData, setCourseData] = useState<CourseData>({
+    title: "",
+    description: "",
+    level: "BEGINNER",
+    duration: "",
+    image: ""
+  })
   const [contentType, setContentType] = useState<"video" | "text" | "mixed">("video")
+
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true)
+
+      const response = await fetch("/api/courses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...courseData,
+          image: "/placeholder-course.jpg",
+          duration: courseData.duration || "0"
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create course")
+      }
+
+      const course = await response.json()
+      
+      toast({
+        title: "Успех",
+        description: "Курс успешно создан",
+      })
+
+      setTimeout(() => {
+        router.push("/courses")
+        router.refresh()
+      }, 1000)
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось создать курс",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="container py-8 max-w-4xl">
@@ -41,7 +105,12 @@ export default function CreateCoursePage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Название курса</Label>
-                  <Input id="title" placeholder="Введите название курса" />
+                  <Input 
+                    id="title" 
+                    placeholder="Введите название курса"
+                    value={courseData.title}
+                    onChange={(e) => setCourseData(prev => ({ ...prev, title: e.target.value }))}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -50,26 +119,35 @@ export default function CreateCoursePage() {
                     id="description" 
                     placeholder="Опишите содержание и цели курса"
                     className="min-h-[100px]"
+                    value={courseData.description}
+                    onChange={(e) => setCourseData(prev => ({ ...prev, description: e.target.value }))}
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Уровень сложности</Label>
-                    <Select>
+                    <Select 
+                      value={courseData.level}
+                      onValueChange={(value: Level) => setCourseData(prev => ({ ...prev, level: value }))}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Выберите уровень" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="beginner">Начальный</SelectItem>
-                        <SelectItem value="intermediate">Средний</SelectItem>
-                        <SelectItem value="advanced">Продвинутый</SelectItem>
+                        <SelectItem value="BEGINNER">Начинающий</SelectItem>
+                        <SelectItem value="INTERMEDIATE">Средний</SelectItem>
+                        <SelectItem value="ADVANCED">Продвинутый</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Продолжительность</Label>
-                    <Input placeholder="Например: 2 недели" />
+                    <Input 
+                      placeholder="Например: 2 недели"
+                      value={courseData.duration}
+                      onChange={(e) => setCourseData(prev => ({ ...prev, duration: e.target.value }))}
+                    />
                   </div>
                 </div>
               </div>
@@ -134,8 +212,18 @@ export default function CreateCoursePage() {
               </div>
 
               <div className="flex justify-end space-x-4">
-                <Button variant="outline">Отмена</Button>
-                <Button>Создать курс</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.back()}
+                >
+                  Отмена
+                </Button>
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={isLoading || !courseData.title || !courseData.description}
+                >
+                  {isLoading ? "Создание..." : "Создать курс"}
+                </Button>
               </div>
             </form>
           </CardContent>
