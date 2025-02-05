@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
+import { prisma } from "@/lib/prisma"
 
 export async function middleware(request: NextRequest) {
-  // Пропускаем WebSocket запросы
-  if (request.headers.get("upgrade") === "websocket") {
+  // Пропускаем WebSocket и API запросы
+  if (request.headers.get("upgrade") === "websocket" || 
+      request.nextUrl.pathname.startsWith('/api/socket.io') ||
+      request.nextUrl.pathname.startsWith('/api/users/update-status') ||
+      request.nextUrl.pathname.startsWith('/api/users/offline') ||
+      request.nextUrl.pathname.startsWith('/api/users/status')) {
     return NextResponse.next()
   }
 
@@ -61,6 +66,19 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // В существующем middleware добавить обработку timeout
+  const TIMEOUT = 5 * 60 * 1000 // 5 минут
+
+  if (token?.id) {
+    // Вызываем API роут для обновления статуса
+    await fetch(`${request.nextUrl.origin}/api/users/update-status`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+  }
+
   return response
 }
 
@@ -73,7 +91,9 @@ export const config = {
     '/profile',
     '/messages',
     '/login',
-    '/uploads/:path*'  // Добавляем обработку uploads
-  ],
+    '/uploads/:path*',
+    '/api/users/:path*',
+    '/api/socket.io/:path*'
+  ]
 }
 

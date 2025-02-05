@@ -17,6 +17,7 @@ import { AddFriendButton } from "@/components/add-friend-button"
 import type { ChatMessage } from "@/types/socket"
 import Link from "next/link"
 import { UserProfilePopover } from "@/components/user-profile-popover"
+import { UserOnlineStatus } from "@/components/user-online-status"
 
 // Общий интерфейс для сообщений
 interface BaseMessage {
@@ -61,46 +62,34 @@ interface MessageListProps {
 
 export function MessageList({ recipientId, friendshipStatus, recipient, onClose }: MessageListProps) {
   const { data: session } = useSession()
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [recipientStatus, setRecipientStatus] = useState({ isOnline: false, lastActive: null })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
   useEffect(() => {
-    fetchMessages()
-    const socket = socketClient.getSocket()
-    
-    if (socket) {
-      socket.on('new_message', handleNewMessage)
-    }
-
-    return () => {
-      if (socket) {
-        socket.off('new_message', handleNewMessage)
+    const loadMessages = async () => {
+      try {
+        const res = await fetch(`/api/messages/${recipientId}`)
+        const data = await res.json()
+        setMessages(data.messages)
+        setRecipientStatus(data.recipient)
+      } catch (error) {
+        console.error('Failed to load messages:', error)
       }
     }
+    
+    loadMessages()
+    // Обновляем каждые 30 секунд
+    const interval = setInterval(loadMessages, 30000)
+    
+    return () => clearInterval(interval)
   }, [recipientId])
-
-  const fetchMessages = async () => {
-    try {
-      const response = await fetch(`/api/messages?receiverId=${recipientId}`)
-      const data = await response.json()
-      setMessages(data)
-      setTimeout(scrollToBottom, 100)
-    } catch (error) {
-      console.error("Error fetching messages:", error)
-      toast.error("Не удалось загрузить сообщения")
-    }
-  }
-
-  const handleNewMessage = (message: any) => {
-    setMessages(prev => [...prev, message])
-    setTimeout(scrollToBottom, 100)
-  }
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,26 +138,35 @@ export function MessageList({ recipientId, friendshipStatus, recipient, onClose 
               user={recipient}
               className="h-10 w-10 transition-transform group-hover:scale-105"
             />
-            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500" />
+            <span className={cn(
+              "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
+              recipientStatus.isOnline ? "bg-green-500" : "bg-red-500"
+            )} />
           </div>
           <div className="group-hover:opacity-80 transition-opacity">
             <p className="font-medium line-clamp-1 flex items-center gap-2">
               {recipient.name}
-              <span className="text-xs text-muted-foreground">
-                (Открыть профиль)
+              <span className="text-xs text-muted-foreground/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
               </span>
             </p>
-            <p className="text-xs text-muted-foreground">
-              {friendshipStatus === 'ACCEPTED' ? (
-                <span className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                  </span>
-                  В сети
-                </span>
-              ) : 'Нет доступа'}
-            </p>
+            <UserOnlineStatus 
+              isOnline={recipientStatus.isOnline}
+              showDot={false}
+              className="text-xs"
+            />
           </div>
 
           {/* Quick Profile Preview - улучшенный дизайн */}
@@ -192,19 +190,34 @@ export function MessageList({ recipientId, friendshipStatus, recipient, onClose 
                 <div className="text-center space-y-1">
                   <h3 className="font-semibold text-lg">{recipient.name}</h3>
                   <p className="text-sm text-muted-foreground">{recipient.email || 'Email не указан'}</p>
+                  <div className="flex items-center justify-center mt-2">
+                    <span className={cn(
+                      "relative flex h-2.5 w-2.5 mr-2",
+                    )}>
+                      <span className={cn(
+                        "absolute inline-flex h-full w-full rounded-full",
+                        recipientStatus.isOnline ? "bg-green-500" : "bg-red-500/50"
+                      )}/>
+                      {recipientStatus.isOnline && (
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"/>
+                      )}
+                    </span>
+                    <span className={cn(
+                      "text-sm",
+                      recipientStatus.isOnline ? "text-green-500" : "text-red-500"
+                    )}>
+                      {recipientStatus.isOnline ? "В сети" : "Не в сети"}
+                      {!recipientStatus.isOnline && recipientStatus.lastActive && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          (Был(а) в сети {format(new Date(recipientStatus.lastActive), 'dd.MM.yyyy HH:mm', { locale: ru })})
+                        </span>
+                      )}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Статус и информация */}
                 <div className="mt-4 flex justify-center gap-6">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-sm">
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                      </span>
-                      <span className="text-muted-foreground">Онлайн</span>
-                    </div>
-                  </div>
                   {friendshipStatus === 'ACCEPTED' && (
                     <div className="text-center">
                       <div className="flex items-center justify-center gap-1.5 text-sm">

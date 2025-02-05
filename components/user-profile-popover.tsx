@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
+import { UserOnlineStatus } from "@/components/user-online-status"
 
 interface UserProfilePopoverProps {
   user: {
@@ -21,6 +22,7 @@ interface UserProfilePopoverProps {
     role?: string
     coursesCompleted?: number
     achievementsCount?: number
+    isOnline: boolean
   }
   friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SELF'
   trigger?: React.ReactNode
@@ -68,9 +70,15 @@ export function UserProfilePopover({
               />
               <div className="flex-1 space-y-1">
                 <h4 className="font-semibold">{user.name}</h4>
-                <p className="text-sm text-muted-foreground">
-                  {user.role || "Пользователь"}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {user.role || "Пользователь"}
+                  </p>
+                  <UserOnlineStatus 
+                    isOnline={user.isOnline} 
+                    showDot={false}
+                  />
+                </div>
               </div>
             </div>
 

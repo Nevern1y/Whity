@@ -3,7 +3,6 @@ import { NextApiResponse } from "next"
 import { Server as SocketIOServer } from "socket.io"
 import { Socket } from "socket.io-client"
 import type { Socket as NetSocket } from "net"
-import { FriendshipStatus } from "@prisma/client"
 import { ExtendedFriendshipStatus } from "@/lib/constants"
 
 export interface ChatMessage {
@@ -36,50 +35,26 @@ export interface ConnectionState {
 }
 
 export interface ServerToClientEvents {
+  error: (error: string) => void
   new_message: (message: ChatMessage) => void
-  error: (error: Error) => void
-  connect: () => void
-  disconnect: () => void
-  connect_error: (error: Error) => void
   "notification:new": (notification: any) => void
-  friend_request: (data: {
-    senderId: string
-    status: FriendshipStatus
-  }) => void
-  friend_request_response: (data: {
-    friendshipId: string
-    status: FriendshipStatus
-  }) => void
-  friend_request_cancelled: (data: {
-    friendshipId: string
-    senderId: string
-  }) => void
-  friendship_update: (data: {
-    type: string
-    friendshipId: string
-  }) => void
+  friend_request: (data: { senderId: string; status: ExtendedFriendshipStatus }) => void
+  friend_request_response: (data: { friendshipId: string; status: ExtendedFriendshipStatus }) => void
+  friend_request_cancelled: (data: { friendshipId: string; senderId: string }) => void
+  friendship_update: (data: any) => void
+  user_status: (data: { userId: string; isOnline: boolean }) => void
 }
 
 export interface ClientToServerEvents {
-  join_chat: (recipientId: string) => void
-  leave_chat: (recipientId: string) => void
-  send_message: (message: Omit<ChatMessage, 'id' | 'createdAt'>) => void
+  friend_request: (data: { targetUserId: string; status: ExtendedFriendshipStatus }) => void
+  friend_request_response: (data: { senderId: string; friendshipId: string; status: ExtendedFriendshipStatus }) => void
+  cancel_friend_request: (friendshipId: string) => void
+  join_chat: (chatId: string) => void
+  leave_chat: (chatId: string) => void
+  send_message: (message: any) => void
   join_user: (userId: string) => void
   leave_user: (userId: string) => void
-  friend_request: (data: {
-    targetUserId: string
-    status: FriendshipStatus
-  }) => void
-  friend_request_response: (data: {
-    senderId: string
-    friendshipId: string
-    status: FriendshipStatus
-  }) => void
-  cancel_friend_request: (friendshipId: string) => void
-  friendship_update: (data: {
-    type: string
-    friendshipId: string
-  }) => void
+  get_user_status: (userId: string) => void
 }
 
 export interface InterServerEvents {

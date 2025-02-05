@@ -14,6 +14,7 @@ import { UserAvatar } from "@/components/user-avatar"
 import { useSearchParams } from "next/navigation"
 import { socketClient } from "@/lib/socket-client"
 import { toast } from "react-hot-toast"
+import { UsersList } from "@/components/users-list"
 
 interface FriendshipData {
   id: string
@@ -29,6 +30,7 @@ interface User {
   isIncoming?: boolean
   sentFriendships?: FriendshipData[]
   receivedFriendships?: FriendshipData[]
+  isOnline?: boolean
 }
 
 export default function MessagesPage() {
@@ -205,68 +207,17 @@ export default function MessagesPage() {
                 <p>{error}</p>
               </div>
             ) : friends.length > 0 ? (
-              <div className="space-y-3">
-                {friends.map((friend) => (
-                  <div
-                    key={friend.id}
-                    onClick={() => friend.name && handleUserSelect(friend)}
-                    className={cn(
-                      "p-3 rounded-lg transition-all duration-200",
-                      friend.name ? "hover:bg-muted cursor-pointer" : "pointer-events-none opacity-50",
-                      "border border-transparent",
-                      selectedUser?.id === friend.id && "bg-muted border-border"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <UserAvatar
-                        user={{
-                          name: friend.name,
-                          image: friend.image
-                        }}
-                        className="h-10 w-10"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium truncate">{friend.name || "Нет данных"}</p>
-                          <div className="flex items-center gap-2">
-                            {friend.friendshipStatus === 'ACCEPTED' ? (
-                              <UserCheck className="h-4 w-4 text-green-500 shrink-0" />
-                            ) : friend.friendshipStatus === 'PENDING' ? (
-                              friend.isIncoming ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleAcceptFriend(friend.id)
-                                  }}
-                                >
-                                  Принять
-                                </Button>
-                              ) : (
-                                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                              )
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleAddFriend(friend.id)
-                                }}
-                              >
-                                <UserPlus className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <UsersList 
+                users={friends.map(friend => ({
+                  ...friend,
+                  isOnline: friend.isOnline || false
+                }))}
+                selectedUserId={selectedUser?.id}
+                onUserSelect={(user) => handleUserSelect({
+                  ...user,
+                  friendshipStatus: user.friendshipStatus || 'NONE'
+                })}
+              />
             ) : searchQuery ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                 <p>Пользователи не найдены</p>

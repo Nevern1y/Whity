@@ -35,7 +35,9 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            image: true
+            image: true,
+            isOnline: true,
+            lastActive: true
           }
         }
       },
@@ -44,7 +46,26 @@ export async function GET(
       }
     })
 
-    return NextResponse.json(messages)
+    const recipient = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        isOnline: true,
+        lastActive: true
+      }
+    })
+
+    const now = new Date().getTime()
+    const lastActive = recipient?.lastActive?.getTime() || 0
+    const OFFLINE_THRESHOLD = 2 * 60 * 1000
+    const isOnline = recipient?.isOnline && (now - lastActive <= OFFLINE_THRESHOLD)
+
+    return NextResponse.json({
+      messages,
+      recipient: {
+        isOnline,
+        lastActive: recipient?.lastActive
+      }
+    })
   } catch (error) {
     console.error("[MESSAGES_GET]", error)
     return new NextResponse("Internal Error", { status: 500 })
