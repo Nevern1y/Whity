@@ -1,6 +1,6 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Friendship, User } from "@prisma/client"
@@ -25,10 +25,14 @@ import {
 } from "@/components/ui/tooltip"
 import { useSocket, SOCKET_EVENTS } from "@/components/providers/socket-provider"
 import { FriendRequestActions } from "@/components/friend-request-actions"
+import { FriendshipStatusBadge } from "@/components/friendship-status-badge"
+import { FriendshipWithUsers } from "@/types/friends"
 
-interface FriendshipWithUsers extends Friendship {
-  sender: Pick<User, 'id' | 'name' | 'image'> | null
-  receiver: Pick<User, 'id' | 'name' | 'image'> | null
+interface Friend {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
 }
 
 interface FriendsListProps {
@@ -182,13 +186,19 @@ export function FriendsList({ friendships, currentUserId }: FriendsListProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={friend.image || undefined} />
-                    <AvatarFallback className="text-lg">
-                      {friend.name?.[0] || '?'}
-                    </AvatarFallback>
+                    <AvatarImage src={friend.image || ""} />
                   </Avatar>
-                  <div>
-                    <p className="font-medium">{friend.name || 'Пользователь'}</p>
+                  <div className="flex-1 min-w-0">
+                    <Link 
+                      href={`/profile/${friend.id}`}
+                      className="font-medium hover:underline truncate block"
+                    >
+                      {friend.name || friend.email || "Пользователь"}
+                    </Link>
+                    <FriendshipStatusBadge 
+                      status={friendship.status as any}
+                      isIncoming={friendship.receiver?.id === friend.id}
+                    />
                   </div>
                 </div>
 

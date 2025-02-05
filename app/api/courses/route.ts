@@ -50,16 +50,21 @@ export async function POST(request: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const data = await request.json() as CourseData
-    
+    const body = await request.json()
+    const { title, description, level, duration, image } = body
+
     const course = await prisma.course.create({
       data: {
-        ...data,
+        title,
+        description,
+        level,
+        duration: String(duration),
+        image: "/placeholder-course.jpg",
         authorId: session.user.id,
-        published: data.published ?? false
+        published: true,
       },
       include: {
         author: {
@@ -69,11 +74,12 @@ export async function POST(request: Request) {
           }
         }
       }
-    }) as CourseWithAuthor
+    })
 
     return NextResponse.json(course)
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create course" }, { status: 500 })
+    console.error("[COURSES_POST]", error)
+    return new NextResponse("Internal Error", { status: 500 })
   }
 }
 

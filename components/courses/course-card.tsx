@@ -14,7 +14,7 @@ interface CourseCardProps {
   id: string
   title: string
   description: string
-  image: string
+  image: string | null
   level: Level
   duration: string
   studentsCount: number
@@ -43,10 +43,11 @@ export function CourseCard({
       <Card className="flex flex-col overflow-hidden">
         <div className="relative aspect-video">
           <Image
-            src={image}
+            src={image || "/placeholder-course.jpg"}
             alt={title}
             fill
             className="object-cover"
+            priority={false}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

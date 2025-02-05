@@ -30,10 +30,8 @@ import { useSession } from 'next-auth/react'
 import type { SessionInfo } from '@/types/session'
 import { DecorativeBackground } from "@/components/ui/decorative-background"
 import { EnhancedCard } from "@/components/ui/enhanced-card"
-import { AvatarUpload } from "@/components/profile/avatar-upload"
 import { useUserStore } from "@/lib/store/user-store"
 import { useRouter } from "next/navigation"
-import { ImageCropDialog } from "@/components/image-crop-dialog"
 
 interface UserSettings {
   profile: {
@@ -119,8 +117,6 @@ export default function SettingsPage() {
   const { data: sessionData, update } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [showSaveOverlay, setShowSaveOverlay] = useState(false)
-  const [cropDialogOpen, setCropDialogOpen] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const { theme, setTheme } = useTheme()
   const settings = useSettings()
   const { toast } = useToast()
@@ -211,12 +207,6 @@ export default function SettingsPage() {
         [key]: value
       }
     }))
-  }
-
-  // Обработчик выбора изображения
-  const handleImageSelect = (image: string) => {
-    setSelectedImage(image)
-    setCropDialogOpen(true)
   }
 
   // Обработчик изменения пароля
@@ -366,38 +356,6 @@ export default function SettingsPage() {
     }
   }
 
-  const handleImageChange = async (url: string) => {
-    try {
-      setIsLoading(true)
-      
-      const response = await fetch('/api/user/update', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: url })
-      })
-
-      if (!response.ok) throw new Error('Failed to update profile')
-
-      setUserImage(url)
-      await update({ image: url })
-      
-      router.refresh()
-      toast({
-        title: "Успех",
-        description: "Фото профиля обновлено"
-      })
-      setCropDialogOpen(false)
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить фото профиля",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   // Анимации
   const containerAnimation = {
     hidden: { opacity: 0, y: 20 },
@@ -493,30 +451,6 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <div className="w-20 h-20 rounded-full overflow-hidden bg-muted">
-                          <AvatarUpload
-                            initialImage={sessionData?.user?.image}
-                            onImageChange={handleImageSelect}
-                          />
-                        </div>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="absolute -bottom-2 -right-2 rounded-full"
-                        >
-                          <Camera className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div>
-                        <h3 className="font-medium">Фото профиля</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Рекомендуемый размер: 400x400px
-                        </p>
-                      </div>
-                    </div>
-
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="name">Имя</Label>
@@ -727,13 +661,6 @@ export default function SettingsPage() {
           </div>
         </Tabs>
       </motion.div>
-
-      <ImageCropDialog
-        isOpen={cropDialogOpen}
-        onClose={() => setCropDialogOpen(false)}
-        imageSrc={selectedImage || ''}
-        onCropComplete={handleImageChange}
-      />
 
       <AnimatePresence>
         {showSaveOverlay && (
