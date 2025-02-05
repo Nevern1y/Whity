@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useSyncUserImage } from "@/hooks/use-sync-user-image"
 import Image from "next/image"
+import { UserAvatar } from "@/components/user-avatar"
 
 interface AvatarUploadProps {
   initialImage?: string | null
@@ -71,23 +72,14 @@ export function AvatarUpload({ initialImage, onImageChange }: AvatarUploadProps)
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative group">
-        <Avatar className="h-24 w-24">
-          {currentImage ? (
-            <div className="relative h-full w-full">
-              <Image 
-                src={currentImage}
-                alt="Profile"
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-          ) : (
-            <AvatarFallback>
-              {session?.user?.name?.[0] || 'U'}
-            </AvatarFallback>
-          )}
-        </Avatar>
+        <UserAvatar 
+          user={{ 
+            image: currentImage, 
+            name: session?.user?.name 
+          }}
+          className="relative flex shrink-0 overflow-hidden rounded-full ring-2 ring-background/50 w-32 h-32 border-4 border-background shadow-xl"
+          size="lg"
+        />
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
           <Button 
             variant="ghost" 

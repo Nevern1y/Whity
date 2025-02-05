@@ -286,6 +286,7 @@ export function MessageList({ recipientId, friendshipStatus, recipient, onClose 
                   <UserAvatar
                     user={message.sender}
                     className="h-6 w-6 mb-1"
+                    size="sm"
                   />
                 )}
                 {!isCurrentUser && !showAvatar && (

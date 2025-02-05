@@ -10,7 +10,6 @@ interface UserAvatarProps {
     name?: string | null
   }
   className?: string
-  fallback?: string
   size?: "sm" | "md" | "lg"
 }
 
@@ -63,17 +62,11 @@ export function UserAvatar({ user, ...props }: UserAvatarProps) {
     lg: "h-20 w-20"
   }
 
-  const getFallbackText = () => {
-    if (props.fallback) return props.fallback
-    if (user?.name) return user.name[0].toUpperCase()
-    return 'U'
-  }
-
   const imageSrc = React.useMemo(() => {
-    if (imageExists === null) return user?.image || undefined
+    if (imageExists === null) return user?.image || fallbackImage
     if (!imageExists) return fallbackImage
-    return user?.image || undefined
-  }, [imageExists, user?.image, fallbackImage])
+    return user?.image || fallbackImage
+  }, [imageExists, user?.image])
 
   return (
     <Avatar className={cn(
@@ -84,9 +77,6 @@ export function UserAvatar({ user, ...props }: UserAvatarProps) {
         src={imageSrc}
         alt={user?.name || 'User'} 
       />
-      <AvatarFallback>
-        {getFallbackText()}
-      </AvatarFallback>
     </Avatar>
   )
 } 

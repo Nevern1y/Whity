@@ -59,10 +59,12 @@ export function UserProfilePopover({
         <Card className="border-0">
           <div className="p-4">
             <div className="flex items-start gap-4">
-              <UserAvatar
-                src={user.image}
-                name={user.name}
-                className="h-16 w-16"
+              <UserAvatar 
+                user={{
+                  image: user.image,
+                  name: user.name
+                }}
+                className="h-10 w-10"
               />
               <div className="flex-1 space-y-1">
                 <h4 className="font-semibold">{user.name}</h4>
