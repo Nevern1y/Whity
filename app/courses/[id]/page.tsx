@@ -45,7 +45,12 @@ export default async function CoursePage({ params }: { params: { id: string } })
         <CardContent className="p-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="relative aspect-video">
-              <Image src={`/course-images/${course.id}.jpg`} alt={course.title} layout="fill" objectFit="cover" />
+              <Image 
+                src={course.image ? `/uploads/${course.image}` : "/images/placeholder-course.jpg"}
+                alt={course.title}
+                fill
+                className="object-cover"
+              />
             </div>
             <div className="space-y-4">
               <h1 className="text-3xl font-bold">{course.title}</h1>

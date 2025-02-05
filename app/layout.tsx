@@ -11,6 +11,8 @@ import { SocketProvider } from "@/components/providers/socket-provider"
 import { RedirectHandler } from "@/components/providers/redirect-handler"
 import { OnlineStatusHandler } from "@/app/components/providers/online-status-handler"
 import { StatusHandler } from "@/components/providers/status-handler"
+import { headers } from 'next/headers'
+import { WebSocketProvider } from '@/providers/websocket-provider'
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -30,6 +32,11 @@ export default async function RootLayout({
     useUserStore.getState().setUserImage(session.user.image)
   }
 
+  const headersList = headers()
+  const host = headersList.get('host') || 'localhost:3000'
+  const protocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws'
+  const wsUrl = `${protocol}://${host}`
+
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
@@ -43,7 +50,6 @@ export default async function RootLayout({
             <Footer />
           </div>
           <AchievementPopup />
-          <SocketProvider />
         </Providers>
       </body>
     </html>

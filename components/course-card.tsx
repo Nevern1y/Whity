@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Clock, Users, Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 interface CourseCardProps {
   id: string
   title: string
   level: string
   duration: number
+  image?: string
   progress?: number
 }
 
@@ -19,12 +21,18 @@ export function CourseCard({
   title,
   level,
   duration,
+  image,
   progress = 0,
 }: CourseCardProps) {
   return (
     <Card className="flex flex-col overflow-hidden h-full">
       <div className="relative aspect-video">
-        <Image src={`/course-images/${id}.jpg`} alt={`Обложка курса: ${title}`} layout="fill" objectFit="cover" />
+        <Image 
+          src={image ? `/uploads/${image}` : "/images/placeholder-course.jpg"}
+          alt={`Обложка курса: ${title}`}
+          layout="fill"
+          objectFit="cover"
+        />
       </div>
       <CardContent className="flex-grow p-4">
         <div className="space-y-2">
@@ -48,11 +56,20 @@ export function CourseCard({
               <Progress value={progress} aria-label={`Прогресс курса: ${progress}%`} />
             </div>
           )}
-          <Button className="w-full" asChild>
-            <Link href={`/courses/${id}`}>
-              {progress === 0 ? "Начать курс" : progress === 100 ? "Пройти заново" : "Продолжить"}
-            </Link>
-          </Button>
+          <Link 
+            href={`/courses/${id}`}
+            className={cn(
+              "w-full",
+              "inline-flex items-center justify-center",
+              "rounded-md bg-primary text-primary-foreground",
+              "hover:bg-primary/90",
+              "h-10 px-4 py-2",
+              "text-sm font-medium",
+              "transition-colors"
+            )}
+          >
+            {progress === 0 ? "Начать курс" : progress === 100 ? "Пройти заново" : "Продолжить"}
+          </Link>
         </div>
       </CardFooter>
     </Card>

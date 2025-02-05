@@ -1,30 +1,16 @@
 "use client"
 
+import { createContext, useContext, useEffect, PropsWithChildren } from "react"
+import { io, Socket } from "socket.io-client"
 import { useFriendSocket } from "@/hooks/use-friend-socket"
-import { createContext, useContext } from "react"
-import { Socket } from "socket.io-client"
 import { ClientToServerEvents, ServerToClientEvents } from "@/types/socket"
-
-type SocketContextType = {
-  socket: Socket<ServerToClientEvents, ClientToServerEvents> | null;
-  isConnected: boolean;
-}
-
-export const SocketContext = createContext<SocketContextType>({
-  socket: null,
-  isConnected: false
-});
-
-export const useSocket = () => {
-  return useContext(SocketContext).socket;
-};
 
 // Определяем тип для событий сокета
 export type SocketEventType = 
   | 'friend_request'
   | 'friend_request_response'
   | 'friend_request_cancelled'
-  | 'friendship_update'  // Добавляем новый тип
+  | 'friendship_update'
   | 'new_message'
   | 'notification:new'
   | 'connect'
@@ -50,7 +36,41 @@ export const SOCKET_EVENTS = {
   ERROR: 'error'
 } as const;
 
-export function SocketProvider() {
+type SocketContextType = {
+  socket: Socket<ServerToClientEvents, ClientToServerEvents> | null;
+  isConnected: boolean;
+}
+
+const SocketContext = createContext<SocketContextType>({
+  socket: null,
+  isConnected: false
+});
+
+export function SocketProvider({ children }: PropsWithChildren) {
+  useEffect(() => {
+    const socket = io(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000", {
+      path: "/api/socket",
+    })
+
+    return () => {
+      socket.close()
+    }
+  }, [])
+
+  // Используем хук для функциональности друзей
   useFriendSocket()
-  return null
+
+  return (
+    <SocketContext.Provider value={{ socket: null, isConnected: false }}>
+      {children}
+    </SocketContext.Provider>
+  )
+}
+
+export const useSocket = () => {
+  const context = useContext(SocketContext)
+  if (!context) {
+    throw new Error("useSocket must be used within a SocketProvider")
+  }
+  return context.socket
 } 

@@ -26,12 +26,50 @@ import {
 } from "@/components/ui/sheet"
 import { Level } from "@/types/prisma"
 import type { Course } from "@/types/prisma"
+import { CourseCard } from "@/components/courses/course-card"
 
 export const revalidate = 60 // revalidate this page every 60 seconds
 
 type SearchParams = {
   search?: string
   level?: Level
+}
+
+// Обновляем интерфейс для курса с сервера
+interface CourseWithDetails {
+  id: string
+  title: string
+  description: string
+  image: string | null
+  level: Level
+  duration: string
+  authorId: string
+  author: {
+    id: string
+    name: string | null
+    image: string | null
+  }
+  studentsCount: number
+  rating: number
+}
+
+// Добавим интерфейс для данных из БД
+interface CourseFromDB {
+  id: string
+  title: string
+  description: string
+  image: string | null
+  level: string
+  duration: string
+  authorId: string
+  author: {
+    id: string
+    name: string | null
+    image: string | null
+  }
+  _count: {
+    students: number
+  }
 }
 
 async function getCourses() {
@@ -47,6 +85,7 @@ async function getCourses() {
         image: true,
         level: true,
         duration: true,
+        authorId: true,
         author: {
           select: {
             id: true,
@@ -62,15 +101,20 @@ async function getCourses() {
       }
     })
 
-    const mappedCourses = courses.map((course: Course) => ({
-      ...course,
-      image: course.image || '',
-      author: {
-        ...course.author,
-        image: course.author.image || '',
-        name: course.author.name || ''
-      },
+    // Добавляем типизацию для параметра course
+    const mappedCourses: CourseWithDetails[] = courses.map((course: CourseFromDB) => ({
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      image: course.image,
       level: course.level as Level,
+      duration: course.duration,
+      authorId: course.authorId,
+      author: {
+        id: course.author.id,
+        name: course.author.name,
+        image: course.author.image
+      },
       studentsCount: course._count.students,
       rating: 4.5
     }))
@@ -78,7 +122,6 @@ async function getCourses() {
     return mappedCourses
   } catch (error) {
     console.error("Database Error:", error)
-    // Вместо выброса ошибки возвращаем пустой массив
     return []
   }
 }
@@ -134,7 +177,26 @@ export default async function CoursesPage() {
           <p className="text-muted-foreground">Курсы пока не добавлены</p>
         </div>
       ) : (
-        <CoursesList initialCourses={courses} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {courses.map((course: CourseWithDetails) => (
+            <CourseCard
+              key={course.id}
+              id={course.id}
+              title={course.title}
+              description={course.description}
+              image={course.image}
+              level={course.level}
+              duration={course.duration}
+              studentsCount={course.studentsCount}
+              rating={course.rating}
+              authorId={course.authorId}
+              currentUser={session?.user ? {
+                id: session.user.id,
+                role: session.user.role
+              } : undefined}
+            />
+          ))}
+        </div>
       )}
     </div>
   )

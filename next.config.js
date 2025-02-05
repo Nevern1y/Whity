@@ -33,14 +33,6 @@ const nextConfig = {
       },
     ]
   },
-  async rewrites() {
-    return [
-      {
-        source: '/socket.io/:path*',
-        destination: '/api/socket.io/:path*'
-      }
-    ]
-  }
 }
 
 module.exports = nextConfig 

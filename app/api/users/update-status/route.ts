@@ -1,38 +1,43 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getIO } from "@/lib/socket-server"
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    
+    const session = await auth()
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    // Обновляем пользователя
-    const user = await prisma.user.update({
+    const body = await req.text()
+    if (!body) {
+      return new NextResponse("No body provided", { status: 400 })
+    }
+
+    const { status } = JSON.parse(body)
+    if (!status) {
+      return new NextResponse("Status is required", { status: 400 })
+    }
+
+    const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: { 
-        isOnline: true,
+        status,
         lastActive: new Date()
+      },
+      select: {
+        id: true,
+        status: true,
+        lastActive: true
       }
     })
 
-    // Оповещаем через сокеты
-    const io = getIO()
-    if (io) {
-      io.emit('user_status', { 
-        userId: session.user.id, 
-        isOnline: true 
-      })
-    }
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json(updatedUser)
   } catch (error) {
-    console.error('Error updating status:', error)
+    console.error("[STATUS_UPDATE_ERROR]", error)
+    if (error instanceof SyntaxError) {
+      return new NextResponse("Invalid JSON", { status: 400 })
+    }
     return new NextResponse("Internal Error", { status: 500 })
   }
 } 

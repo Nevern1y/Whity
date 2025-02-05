@@ -9,6 +9,8 @@ import { motion } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
 import { Level } from "@/types/prisma"
 import { cn } from "@/lib/utils"
+import { CourseActions } from "@/components/courses/course-actions"
+import { useMemo } from "react"
 
 interface CourseCardProps {
   id: string
@@ -20,6 +22,11 @@ interface CourseCardProps {
   studentsCount: number
   rating: number
   progress?: number
+  authorId: string
+  currentUser?: {
+    id: string
+    role: string
+  }
 }
 
 export function CourseCard({
@@ -31,8 +38,23 @@ export function CourseCard({
   duration,
   studentsCount,
   rating,
-  progress = 0
+  progress = 0,
+  authorId,
+  currentUser
 }: CourseCardProps) {
+  console.log('Course data:', { id, title, image })
+  
+  const imageSrc = useMemo(() => {
+    console.log('Raw image path:', image)
+    if (!image) return "/images/placeholder-course.jpg"
+    if (image.startsWith('/uploads/')) return image
+    return `/uploads/${image}`
+  }, [image])
+
+  console.log('Final image src:', imageSrc)
+
+  const showActions = currentUser && (currentUser.id === authorId || currentUser.role === 'ADMIN')
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -40,23 +62,46 @@ export function CourseCard({
       whileHover={{ y: -5 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="flex flex-col overflow-hidden">
+      <Card className="flex flex-col overflow-hidden group">
         <div className="relative aspect-video">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          
           <Image
-            src={image || "/placeholder-course.jpg"}
-            alt={title}
+            src={imageSrc}
+            alt={`Обложка курса: ${title}`}
             fill
             className="object-cover"
             priority={false}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            onError={(e) => {
+              console.error('Image load error:', e)
+              const target = e.target as HTMLImageElement
+              console.error('Failed to load:', target.src)
+              target.src = "/images/placeholder-course.jpg"
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <Badge 
-            variant={level === 'BEGINNER' ? 'default' : 'secondary'}
-            className="absolute top-2 right-2"
-          >
-            {level}
-          </Badge>
+
+          <div className="absolute top-0 left-0 right-0 p-3 flex justify-between items-start">
+            <Badge 
+              variant={level === 'BEGINNER' ? 'default' : 'secondary'}
+              className="backdrop-blur-sm bg-opacity-80"
+            >
+              {level}
+            </Badge>
+
+            {showActions && (
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <CourseActions
+                  courseId={id}
+                  authorId={authorId}
+                  currentUserId={currentUser.id}
+                  userRole={currentUser.role}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
 
         <CardContent className="flex-1 p-4">

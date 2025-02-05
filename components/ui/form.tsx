@@ -104,13 +104,16 @@ const FormLabel = React.forwardRef<
 FormLabel.displayName = "FormLabel"
 
 const FormControl = React.forwardRef<
-  React.ElementRef<typeof Slot>,
-  React.ComponentPropsWithoutRef<typeof Slot>
->(({ ...props }, ref) => {
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & {
+    asChild?: boolean
+  }
+>(({ asChild = false, ...props }, ref) => {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+  const Comp = asChild ? Slot : "div"
 
   return (
-    <Slot
+    <Comp
       ref={ref}
       id={formItemId}
       aria-describedby={
