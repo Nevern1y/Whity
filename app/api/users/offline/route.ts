@@ -1,38 +1,61 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { checkAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getIO } from "@/lib/socket-server"
+import { emitSocketEvent } from "@/lib/socket-server"
 
-export async function POST(req: Request) {
+interface OfflineResponse {
+  success: boolean
+  user: {
+    id: string
+    isOnline: boolean
+    lastActive: Date | null
+  }
+}
+
+export async function POST(): Promise<NextResponse<OfflineResponse>> {
   try {
-    const session = await getServerSession(authOptions)
+    console.log("[OFFLINE] Starting offline status update")
     
-    if (!session?.user?.id) {
+    // Проверяем заголовки запроса
+    const session = await checkAuth()
+    console.log("[OFFLINE] Session check:", { 
+      hasSession: !!session,
+      userId: session?.user?.id,
+      cookies: !!session?.user?.id
+    })
+
+    if (!session) {
+      console.log("[OFFLINE] No session found")
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    // Обновляем статус пользователя на оффлайн
     const user = await prisma.user.update({
       where: { id: session.user.id },
       data: { 
         isOnline: false,
         lastActive: new Date()
+      },
+      select: {
+        id: true,
+        isOnline: true,
+        lastActive: true
       }
+    })
+    console.log("[OFFLINE] User status updated:", { 
+      userId: user.id, 
+      isOnline: user.isOnline 
     })
 
     // Оповещаем через сокеты
-    const io = getIO()
-    if (io) {
-      io.emit('user_status', { 
-        userId: session.user.id, 
-        isOnline: false 
-      })
-    }
+    emitSocketEvent("user:status", {
+      userId: user.id,
+      isOnline: false,
+      lastActive: user.lastActive
+    })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, user })
   } catch (error) {
-    console.error('Error updating offline status:', error)
+    console.error("[OFFLINE_ERROR]", error)
     return new NextResponse("Internal Error", { status: 500 })
   }
 } 

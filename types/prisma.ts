@@ -1,8 +1,4 @@
-export enum Level {
-  BEGINNER = "BEGINNER",
-  INTERMEDIATE = "INTERMEDIATE",
-  ADVANCED = "ADVANCED"
-}
+export type Level = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
 
 export interface User {
   id: string

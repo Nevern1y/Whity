@@ -1,11 +1,25 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { Friendship, User } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
+import { FriendshipStatus } from "@/lib/constants"
 
-type FriendshipWithUsers = Friendship & {
-  sender: { id: string } | null
-  receiver: { id: string } | null
+type UserSelect = {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+}
+
+interface FriendshipWithUsers {
+  id: string
+  senderId: string
+  receiverId: string
+  status: FriendshipStatus
+  createdAt: Date
+  updatedAt: Date
+  sender: UserSelect
+  receiver: UserSelect
 }
 
 interface UserIdOnly {

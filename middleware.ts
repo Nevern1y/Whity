@@ -2,21 +2,29 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
 
 export async function middleware(request: NextRequest) {
-  // Пропускаем WebSocket и API запросы
-  if (request.headers.get("upgrade") === "websocket" || 
-      request.nextUrl.pathname.startsWith('/api/socket.io') ||
-      request.nextUrl.pathname.startsWith('/api/users/update-status') ||
-      request.nextUrl.pathname.startsWith('/api/users/offline') ||
-      request.nextUrl.pathname.startsWith('/api/users/status')) {
+  console.log(`[Middleware] Processing ${request.method} ${request.nextUrl.pathname}`)
+
+  // Если это API запрос или WebSocket, пропускаем
+  if (
+    request.nextUrl.pathname.startsWith('/api/') ||
+    request.headers.get("upgrade") === "websocket"
+  ) {
+    console.log('[Middleware] Skipping API/WebSocket request')
     return NextResponse.next()
   }
 
-  const token = await getToken({ 
+  // Кэшируем результат getToken для одного запроса
+  const tokenPromise = getToken({ 
     req: request,
     secret: process.env.NEXTAUTH_SECRET 
   })
+  
+  const token = await tokenPromise
+  
+  console.log('[Middleware] Token:', token ? 'exists' : 'missing')
   
   // Защищенные роуты
   const protectedPaths = ['/admin', '/courses/create', '/settings', '/profile', '/messages']
@@ -54,8 +62,19 @@ export async function middleware(request: NextRequest) {
     response.cookies.set("show-sidebar", "1")
   }
 
-  if (request.nextUrl.pathname.startsWith('/api/socketio')) {
-    response.headers.set('Access-Control-Allow-Origin', '*')
+  // Обработка WebSocket запросов
+  if (request.nextUrl.pathname.startsWith('/api/socket.io')) {
+    const response = NextResponse.next()
+    
+    // Устанавливаем CORS заголовки только для WebSocket
+    if (request.headers.get("upgrade") === "websocket") {
+      response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_APP_URL || '*')
+      response.headers.set('Access-Control-Allow-Methods', 'GET,POST')
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      response.headers.set('Access-Control-Allow-Credentials', 'true')
+    }
+    
+    return response
   }
 
   // Обработка статических файлов
@@ -66,17 +85,9 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // В существующем middleware добавить обработку timeout
-  const TIMEOUT = 5 * 60 * 1000 // 5 минут
-
-  if (token?.id) {
-    // Вызываем API роут для обновления статуса
-    await fetch(`${request.nextUrl.origin}/api/users/update-status`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
+  // Устанавливаем заголовок для идентификации пользователя
+  if (token?.sub) {
+    response.headers.set('x-user-id', token.sub)
   }
 
   return response
@@ -85,15 +96,11 @@ export async function middleware(request: NextRequest) {
 // Обновляем конфигурацию matcher
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/courses/create',
-    '/settings',
-    '/profile',
-    '/messages',
-    '/login',
-    '/uploads/:path*',
-    '/api/users/:path*',
-    '/api/socket.io/:path*'
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    "/api/users/:path*",
+    "/api/friends/:path*",
+    "/api/messages/:path*",
+    "/messages/:path*"
   ]
 }
 

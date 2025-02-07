@@ -1,5 +1,4 @@
 import { Book, Trophy, Star, MessageSquare } from "lucide-react"
-import { FriendshipStatus } from "@prisma/client"
 
 export const notificationTypes = {
   course: {
@@ -24,15 +23,15 @@ export const notificationTypes = {
   },
 }
 
-// Определяем тип для статусов дружбы
-export type ExtendedFriendshipStatus = 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
-
 export const FRIENDSHIP_STATUS = {
   NONE: 'NONE',
   PENDING: 'PENDING',
   ACCEPTED: 'ACCEPTED',
   REJECTED: 'REJECTED'
 } as const
+
+export type FriendshipStatus = (typeof FRIENDSHIP_STATUS)[keyof typeof FRIENDSHIP_STATUS]
+export type ExtendedFriendshipStatus = FriendshipStatus
 
 export const FRIENDSHIP_STATUS_LABELS: Record<ExtendedFriendshipStatus, string> = {
   NONE: 'Добавить в друзья',

@@ -17,6 +17,10 @@ const navigation = [
 
 export function MainNav() {
   const pathname = usePathname()
+  
+  const handleNavClick = (href: string) => {
+    console.log("[MainNav] Navigating to:", href)
+  }
 
   return (
     <nav className="absolute left-1/2 -translate-x-1/2">
@@ -29,6 +33,7 @@ export function MainNav() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={() => handleNavClick(item.href)}
               className={cn(
                 "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all",
                 "hover:bg-accent hover:text-accent-foreground",

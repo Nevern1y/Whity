@@ -3,9 +3,9 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { getIO } from "@/lib/socket-server"
-import { FriendshipStatus } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { FriendshipValidator } from "@/lib/friendship-validator"
-import { FRIENDSHIP_STATUS } from "@/lib/constants"
+import { FRIENDSHIP_STATUS, type FriendshipStatus } from "@/lib/constants"
 
 const friendRequestSchema = z.object({
   targetUserId: z.string().min(1)
@@ -180,20 +180,26 @@ export async function PATCH(req: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const friends = await prisma.friendship.findMany({
+    console.log('Getting friends for user:', session.user.id)
+
+    const friendships = await prisma.friendship.findMany({
       where: {
-        OR: [
-          { senderId: session.user.id },
-          { receiverId: session.user.id }
-        ],
-        status: FRIENDSHIP_STATUS.ACCEPTED
+        AND: [
+          {
+            OR: [
+              { senderId: session.user.id },
+              { receiverId: session.user.id }
+            ]
+          },
+          { status: 'ACCEPTED' }
+        ]
       },
       include: {
         sender: {
@@ -201,7 +207,9 @@ export async function GET(request: Request) {
             id: true,
             name: true,
             email: true,
-            image: true
+            image: true,
+            isOnline: true,
+            lastActive: true
           }
         },
         receiver: {
@@ -209,15 +217,32 @@ export async function GET(request: Request) {
             id: true,
             name: true,
             email: true,
-            image: true
+            image: true,
+            isOnline: true,
+            lastActive: true
           }
         }
       }
     })
 
+    console.log('Raw friendships:', JSON.stringify(friendships, null, 2))
+
+    const friends = friendships.map(friendship => {
+      const friend = friendship.senderId === session.user.id 
+        ? friendship.receiver 
+        : friendship.sender
+      
+      return {
+        ...friend,
+        friendshipId: friendship.id,
+        friendshipStatus: 'ACCEPTED'
+      }
+    })
+
+    console.log('Formatted friends:', JSON.stringify(friends, null, 2))
     return NextResponse.json(friends)
   } catch (error) {
     console.error("[FRIENDS_GET]", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return new NextResponse("Internal Error", { status: 500 })
   }
 } 

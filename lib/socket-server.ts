@@ -1,5 +1,7 @@
 import { Server as NetServer } from "http"
-import { Server as SocketIOServer } from "socket.io"
+import { NextApiRequest } from "next"
+import { Server as ServerIO } from "socket.io"
+import { NextApiResponseServerIO } from "@/types/next"
 import { auth } from "@/lib/auth"
 import type { 
   ClientToServerEvents, 
@@ -12,21 +14,89 @@ import { PrismaClient } from "@prisma/client"
 import { ExtendedFriendshipStatus } from "@/lib/constants"
 import { getToken } from "next-auth/jwt"
 
-let io: ServerType | null = null
+let io: ServerIO | null = null
 const prisma = new PrismaClient()
 
-export const initSocketServer = (httpServer: NetServer): ServerType => {
-  if (!io) {
-    io = new SocketIOServer(httpServer, {
-      path: '/api/socket.io',
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+
+export function initSocketServer(req: NextApiRequest, res: NextApiResponseServerIO) {
+  if (!res.socket.server.io) {
+    const httpServer: NetServer = res.socket.server as any
+    const io = new ServerIO(httpServer, {
+      path: "/api/socket.io",
       addTrailingSlash: false,
       cors: {
-        origin: process.env.NEXTAUTH_URL || '*',
-        methods: ['GET', 'POST'],
-        credentials: true,
+        origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true
       },
-      transports: ['websocket', 'polling'],
-      allowEIO3: true
+    })
+    
+    // Сохраняем io в глобальном объекте
+    res.socket.server.io = io
+
+    io.on("connection", (socket) => {
+      console.log("Socket connected:", socket.id)
+
+      socket.on("join_user", (userId: string) => {
+        socket.join(userId)
+        console.log(`User ${userId} joined their room`)
+      })
+
+      socket.on("leave_user", (userId: string) => {
+        socket.leave(userId)
+        console.log(`User ${userId} left their room`)
+      })
+
+      socket.on("disconnect", () => {
+        console.log("Socket disconnected:", socket.id)
+      })
+    })
+  }
+  return res.socket.server.io
+}
+
+export function getIO() {
+  if (typeof global.io !== 'undefined') {
+    return global.io
+  }
+  return null
+}
+
+export function emitSocketEvent(event: string, data: any) {
+  const io = getIO()
+  if (io) {
+    io.emit(event, data)
+  }
+}
+
+export function initSocketServerOld(server: NetServer) {
+  if (!io) {
+    io = new ServerIO(server, {
+      path: "/api/socket.io",
+      addTrailingSlash: false,
+      cors: {
+        origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true
+      },
+      pingTimeout: 60000,
+      pingInterval: 25000,
+      connectTimeout: 10000,
+      transports: ["websocket", "polling"]
+    })
+
+    // Глобальные обработчики ошибок
+    io.engine.on("connection_error", (err) => {
+      console.error("[Socket] Connection error:", err)
+    })
+
+    io.on("connect_error", (err) => {
+      console.error("[Socket] Connect error:", err)
     })
 
     io.on("connection", async (socket) => {
@@ -146,14 +216,6 @@ export const initSocketServer = (httpServer: NetServer): ServerType => {
   return io
 }
 
-export const getIO = () => io
-
-export const setIO = (socketIO: ServerType) => {
+export function setIO(socketIO: ServerIO) {
   io = socketIO
-}
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
 } 

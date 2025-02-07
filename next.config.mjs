@@ -10,38 +10,100 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: 'localhost',
-      }
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
-    domains: ['localhost'],
+    minimumCacheTTL: 60,
+    deviceSizes: [640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 48, 64, 96],
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        net: false,
+        tls: false,
+        fs: false,
+      }
+    }
+    config.externals.push({
+      "utf-8-validate": "commonjs utf-8-validate",
+      bufferutil: "commonjs bufferutil"
+    })
+    return config
   },
   experimental: {
-    webpackBuildWorker: true
+    optimizePackageImports: [
+      '@radix-ui/react-icons',
+      '@heroicons/react',
+      'date-fns',
+      'lucide-react'
+    ],
+    optimizeCss: true,
   },
   async headers() {
     return [
       {
-        source: '/uploads/:path*',
+        source: '/:path*',
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
           },
-        ],
+          {
+            key: 'Content-Type',
+            value: 'text/html; charset=utf-8'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
       },
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Content-Type',
+            value: 'application/json; charset=utf-8'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-store'
+          }
+        ]
+      },
+      {
+        source: '/api/socket.io',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-store'
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET,POST,OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type'
+          }
+        ]
+      }
     ]
-  },
-  webpack: (config) => {
-    config.watchOptions = {
-      poll: 1000,
-      aggregateTimeout: 300,
-    }
-    config.module.rules.push({
-      test: /\.(png|jpg|gif|jpeg|svg)$/i,
-      type: 'asset/resource'
-    })
-    return config
   },
 }
 

@@ -20,4 +20,21 @@ export interface Notification {
   read: boolean
   createdAt: Date
   link?: string
+}
+
+export interface User {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+  friendshipStatus: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
+  isOnline: boolean
+  isIncoming?: boolean
+  sentFriendships?: FriendshipData[]
+  receivedFriendships?: FriendshipData[]
+}
+
+export interface FriendshipData {
+  id: string
+  status: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
 } 

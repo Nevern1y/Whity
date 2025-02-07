@@ -25,15 +25,14 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const isMobile = useMediaQuery("(max-width: 768px)")
   const isAuthPage = pathname?.startsWith('/auth')
-  const setUserImage = useUserStore((state) => state.setUserImage)
+  const { userImage, userId } = useUserStore()
 
   useSyncUserImage()
 
-  useEffect(() => {
-    if (session?.user?.image) {
-      setUserImage(session.user.image)
-    }
-  }, [session?.user?.image, setUserImage])
+  // Используем фото только если ID пользователя совпадает
+  const displayImage = session?.user?.id === userId 
+    ? userImage || session?.user?.image 
+    : session?.user?.image
 
   if (isAuthPage) return null
 
@@ -120,29 +119,60 @@ export function Header() {
               <NotificationsButton />
               <ThemeToggle />
               <FriendsButton />
-              <UserNav user={session.user} />
+              <UserNav 
+                user={{
+                  ...session.user,
+                  image: displayImage
+                }} 
+              />
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <ThemeToggle />
               {!isMobile ? (
                 <>
-                  <Link href="/auth/login">
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                      Войти
-                    </Button>
+                  <Link 
+                    href="/login" 
+                    className={cn(
+                      "inline-flex items-center justify-center",
+                      "rounded-md text-sm font-medium",
+                      "h-9 px-4",
+                      "transition-colors",
+                      "bg-transparent hover:bg-accent/50",
+                      "text-foreground"
+                    )}
+                  >
+                    Войти
                   </Link>
-                  <Link href="/auth/register">
-                    <Button size="sm" className="flex items-center gap-2">
-                      Регистрация
-                    </Button>
+                  <Link 
+                    href="/register" 
+                    className={cn(
+                      "inline-flex items-center justify-center",
+                      "rounded-md text-sm font-medium",
+                      "h-9 px-4",
+                      "transition-colors",
+                      "bg-primary text-primary-foreground",
+                      "hover:bg-primary/90",
+                      "shadow"
+                    )}
+                  >
+                    Регистрация
                   </Link>
                 </>
               ) : (
-                <Link href="/auth/login">
-                  <Button size="sm" className="flex items-center gap-2">
-                    Войти
-                  </Button>
+                <Link 
+                  href="/login"
+                  className={cn(
+                    "inline-flex items-center justify-center",
+                    "rounded-md text-sm font-medium",
+                    "h-9 px-4",
+                    "transition-colors",
+                    "bg-primary text-primary-foreground",
+                    "hover:bg-primary/90",
+                    "shadow"
+                  )}
+                >
+                  Войти
                 </Link>
               )}
             </div>

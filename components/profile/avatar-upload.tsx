@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Camera } from "lucide-react"
+import { Camera, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -10,10 +10,11 @@ import { useRouter } from "next/navigation"
 import { useSyncUserImage } from "@/hooks/use-sync-user-image"
 import Image from "next/image"
 import { UserAvatar } from "@/components/user-avatar"
+import { useUserStore } from "@/lib/store/user-store"
 
 interface AvatarUploadProps {
   initialImage?: string | null
-  onImageChange?: (url: string) => void
+  onImageChange?: (url: string | null) => void
 }
 
 export function AvatarUpload({ initialImage, onImageChange }: AvatarUploadProps) {
@@ -23,6 +24,7 @@ export function AvatarUpload({ initialImage, onImageChange }: AvatarUploadProps)
   const [isUploading, setIsUploading] = useState(false)
   const [currentImage, setCurrentImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isHovered, setIsHovered] = useState(false)
 
   useEffect(() => {
     if (initialImage && !initialImage.startsWith('blob:') && !initialImage.startsWith('data:')) {
@@ -69,8 +71,32 @@ export function AvatarUpload({ initialImage, onImageChange }: AvatarUploadProps)
     }
   }
 
+  const handleDeletePhoto = async () => {
+    try {
+      const response = await fetch('/api/user/image', {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete photo')
+      }
+
+      useUserStore.setState({ userImage: null })
+      setCurrentImage(null)
+      if (onImageChange) onImageChange(null)
+      toast.success('Фото профиля удалено')
+    } catch (error) {
+      console.error('Error deleting photo:', error)
+      toast.error('Не удалось удалить фото')
+    }
+  }
+
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div 
+      className="flex flex-col items-center gap-4"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="relative group">
         <UserAvatar 
           user={{ 
@@ -105,6 +131,17 @@ export function AvatarUpload({ initialImage, onImageChange }: AvatarUploadProps)
         onChange={handleFileChange}
         disabled={isUploading}
       />
+
+      {initialImage && isHovered && (
+        <Button
+          variant="destructive"
+          size="icon"
+          className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+          onClick={handleDeletePhoto}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   )
 } 

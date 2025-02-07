@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { Clock, Trophy, Target, Award, ArrowUp } from "lucide-react"
+import { Clock, Trophy, Target, Award, ArrowUp, Trash2 } from "lucide-react"
 import { StatsCards } from "@/components/profile/stats-cards"
 import { useUserStore } from "@/lib/store/user-store"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 
 interface CourseProgress {
   completedAt: Date | null;
@@ -99,6 +100,25 @@ export function ProfileContent() {
 
   const displayImage = userImage || profileData?.user?.image || session?.user?.image
 
+  const handleDeletePhoto = async () => {
+    try {
+      const response = await fetch('/api/user/image', {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete photo')
+      }
+
+      // Обновляем локальное состояние
+      useUserStore.setState({ userImage: null })
+      toast.success('Фото профиля удалено')
+    } catch (error) {
+      console.error('Error deleting photo:', error)
+      toast.error('Не удалось удалить фото')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="container py-6 space-y-8">
@@ -121,12 +141,24 @@ export function ProfileContent() {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <Avatar className="w-24 h-24">
-              <AvatarImage src={displayImage || undefined} />
-              <AvatarFallback className="text-2xl">
-                {session?.user?.name?.[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="w-24 h-24">
+                <AvatarImage src={displayImage || undefined} />
+                <AvatarFallback className="text-2xl">
+                  {session?.user?.name?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              {displayImage && (
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={handleDeletePhoto}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <div className="space-y-2 text-center md:text-left">
               <h1 className="text-2xl font-bold">{profileData?.user?.name || session?.user?.name}</h1>
               <p className="text-muted-foreground">{profileData?.user?.email || session?.user?.email}</p>

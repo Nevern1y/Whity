@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
-import { Level } from "@prisma/client"
+import { Level } from "@/types/prisma"
 import { 
   Select, 
   SelectContent, 
@@ -41,7 +41,7 @@ export default function CreateCoursePage() {
   const [courseData, setCourseData] = useState<CourseData>({
     title: "",
     description: "",
-    level: "BEGINNER",
+    level: "BEGINNER" as Level,
     duration: "",
     image: ""
   })
@@ -194,17 +194,13 @@ export default function CreateCoursePage() {
 
                   <TabsContent value="mixed" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <Button variant="outline" className="h-32">
-                        <div className="text-center">
-                          <ImageIcon className="h-8 w-8 mx-auto mb-2" />
-                          <span>Добавить изображение</span>
-                        </div>
+                      <Button variant="outline" className="h-32 flex flex-col items-center">
+                        <ImageIcon className="h-8 w-8 mb-2" />
+                        <span>Добавить изображение</span>
                       </Button>
-                      <Button variant="outline" className="h-32">
-                        <div className="text-center">
-                          <LinkIcon className="h-8 w-8 mx-auto mb-2" />
-                          <span>Добавить ссылку</span>
-                        </div>
+                      <Button variant="outline" className="h-32 flex flex-col items-center">
+                        <LinkIcon className="h-8 w-8 mb-2" />
+                        <span>Добавить ссылку</span>
                       </Button>
                     </div>
                   </TabsContent>

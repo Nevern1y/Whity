@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
+import { toast } from "sonner"
 
 export function UserButton() {
   const { data: session } = useSession()
@@ -54,7 +55,10 @@ export function UserButton() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-red-600"
-          onClick={() => signOut()}
+          onClick={() => {
+            signOut()
+            toast.success("Вы вышли из системы")
+          }}
         >
           Выйти
         </DropdownMenuItem>

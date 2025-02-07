@@ -71,24 +71,18 @@ export function CourseActions({
   return (
     <div className="relative">
       <DropdownMenu>
-        <DropdownMenuTrigger>
-          <div 
-            className="h-8 w-8 p-0 flex items-center justify-center rounded-md backdrop-blur-sm bg-white/10 hover:bg-white/20 border-0 cursor-pointer"
-          >
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
             <MoreVertical className="h-4 w-4" />
-          </div>
+          </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          align="end"
-          className="w-48 backdrop-blur-md bg-white/90 dark:bg-gray-900/90"
-        >
-          <DropdownMenuItem 
-            className="gap-2 cursor-pointer"
-            onClick={() => setIsEditing(true)}
-          >
-            <Pencil className="h-4 w-4" />
-            Редактировать
-          </DropdownMenuItem>
+        <DropdownMenuContent align="end">
+          {(currentUserId === authorId || userRole === 'ADMIN') && (
+            <DropdownMenuItem onSelect={() => setIsEditing(true)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Редактировать
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem 
             className="text-destructive gap-2 cursor-pointer"
             disabled={isDeleting}
@@ -100,23 +94,22 @@ export function CourseActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Редактировать курс</DialogTitle>
-            <DialogDescription>
-              Внесите необходимые изменения в информацию о курсе
-            </DialogDescription>
-          </DialogHeader>
-          <CourseForm 
-            courseId={courseId}
-            onSuccess={() => {
-              setIsEditing(false)
-              router.refresh()
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      {isEditing && (
+        <Dialog open={isEditing} onOpenChange={setIsEditing}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Редактировать курс</DialogTitle>
+            </DialogHeader>
+            <CourseForm 
+              courseId={courseId}
+              onSuccess={() => {
+                setIsEditing(false)
+                router.refresh()
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 } 

@@ -64,4 +64,66 @@ export async function DELETE(
     console.error("[FRIENDSHIP_DELETE]", error)
     return new NextResponse("Internal Error", { status: 500 })
   }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return new NextResponse("Unauthorized", { status: 401 })
+    }
+
+    const friendshipId = params.id
+    const { action } = await request.json()
+
+    const friendship = await prisma.friendship.findUnique({
+      where: { id: friendshipId },
+      include: {
+        sender: true,
+        receiver: true
+      }
+    })
+
+    if (!friendship) {
+      return new NextResponse("Friendship not found", { status: 404 })
+    }
+
+    // Проверяем, что текущий пользователь является получателем запроса
+    if (friendship.receiverId !== session.user.id) {
+      return new NextResponse("Unauthorized", { status: 401 })
+    }
+
+    const updatedFriendship = await prisma.friendship.update({
+      where: { id: friendshipId },
+      data: {
+        status: action === 'accept' ? 'ACCEPTED' : 'REJECTED'
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(updatedFriendship)
+  } catch (error) {
+    console.error("[FRIENDSHIP_ACTION]", error)
+    return new NextResponse("Internal Error", { status: 500 })
+  }
 } 

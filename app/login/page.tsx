@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { LogIn, Mail, Lock } from "lucide-react"
+import { AuthBackground } from "@/components/auth/auth-background"
 
 function Logo(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -63,31 +64,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-[400px] space-y-6">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden bg-gradient-to-br from-background via-background/95 to-background">
+      <AuthBackground />
+      
+      <div className="w-full max-w-[400px] space-y-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center space-y-2"
+          className="text-center space-y-4"
         >
-          <Link href="/" className="inline-block">
-            <Logo className="mx-auto text-primary" />
+          <Link href="/" className="inline-block group">
+            <Logo className="mx-auto text-primary group-hover:text-primary/80 transition-all duration-300 transform group-hover:scale-110" />
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight">
-            С возвращением!
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Войдите в свой аккаунт для продолжения
-          </p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+              С возвращением!
+            </h1>
+            <p className="text-base text-muted-foreground">
+              Войдите в свой аккаунт для продолжения
+            </p>
+          </div>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
         >
-          <Card className="border-none shadow-lg">
+          <Card className="border-none shadow-2xl backdrop-blur-md bg-card/50">
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -158,15 +162,20 @@ export default function LoginPage() {
           </Card>
         </motion.div>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-center text-sm text-muted-foreground"
+        >
           Нет аккаунта?{" "}
           <Link 
             href="/register" 
-            className="text-primary hover:underline font-medium"
+            className="text-primary hover:text-primary/80 font-medium transition-colors"
           >
             Зарегистрироваться
           </Link>
-        </p>
+        </motion.p>
       </div>
     </div>
   )

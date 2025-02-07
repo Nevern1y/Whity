@@ -1,24 +1,30 @@
+import NextAuth, { type NextAuthOptions } from "next-auth"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
-import { NextAuthOptions } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import CredentialsProvider from "next-auth/providers/credentials"
+import GoogleProvider from "next-auth/providers/google"
+import GithubProvider from "next-auth/providers/github"
 import { compare } from "bcryptjs"
 import { getServerSession } from "next-auth/next"
 import { UserRole } from "@/types/next-auth"
+import { cache } from 'react'
 
-export const authOptions: NextAuthOptions = {
+// Кэшируем адаптер
+const adapter = cache(() => PrismaAdapter(prisma))()
+
+export const authConfig: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
-  secret: process.env.NEXTAUTH_SECRET,
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  pages: {
-    signIn: "/login",
-  },
   providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    }),
     CredentialsProvider({
-      name: "credentials",
+      name: 'credentials',
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
@@ -37,39 +43,74 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isValid = await compare(credentials.password, user.hashedPassword)
-
         if (!isValid) {
           return null
         }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          role: user.role as UserRole
-        }
+        return user
       }
     })
   ],
+  session: {
+    strategy: "jwt",
+  },
   callbacks: {
-    jwt: async ({ token, user }) => {
+    async session({ session, token }) {
+      if (session.user && token.sub) {
+        session.user.id = token.sub
+      }
+      return session
+    },
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id
         token.role = user.role
-        token.accessToken = user.id
       }
       return token
-    },
-    session: async ({ session, token }) => {
-      if (session?.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
-        session.accessToken = token.accessToken as string
-      }
-      return session
     }
-  }
+  },
+  pages: {
+    signIn: '/login',
+    error: '/error',
+  },
+  events: {
+    async signOut({ token }) {
+      if (token?.sub) {
+        await prisma.user.update({
+          where: { id: token.sub },
+          data: { 
+            isOnline: false,
+            lastActive: new Date()
+          }
+        })
+      }
+    }
+  },
+  debug: process.env.NODE_ENV === 'development',
 }
 
-export const auth = () => getServerSession(authOptions) 
+// Создаем и экспортируем auth функции
+const handler = NextAuth(authConfig)
+export { handler as GET, handler as POST }
+
+// Хелпер для проверки авторизации
+export async function auth() {
+  return await getServerSession(authConfig)
+}
+
+// Хелпер для проверки авторизации
+export async function checkAuth() {
+  console.log("[AUTH] Checking auth...")
+  const session = await getServerSession(authConfig)
+  console.log("[AUTH] Session:", {
+    exists: !!session,
+    userId: session?.user?.id,
+    headers: session?.user ? "Present" : "Missing"
+  })
+  
+  if (!session?.user?.id) {
+    console.log("[AUTH] No valid session found")
+    return null
+  }
+  return session
+} 

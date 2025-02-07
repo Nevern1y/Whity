@@ -4,43 +4,56 @@ import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 
 export function StatusHandler() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    // Отправляем offline статус при размонтировании компонента
+    return () => {
+      if (session?.user?.id && status === 'authenticated') {
+        console.log('[StatusHandler] Setting offline status before unmount')
+        fetch('/api/users/offline', { 
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }).then(() => {
+          console.log('[StatusHandler] Successfully set offline status')
+        }).catch(error => {
+          console.error('[StatusHandler] Failed to set offline status:', error)
+        })
+      }
+    }
+  }, [session?.user?.id, status])
+
+  // Обновление статуса в отдельном эффекте
+  useEffect(() => {
+    if (status !== 'authenticated' || !session?.user?.id) {
+      return
+    }
 
     const updateStatus = async () => {
       try {
-        await fetch('/api/users/update-status', {
+        const res = await fetch('/api/users/update-status', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           }
         })
+        
+        if (!res.ok) {
+          throw new Error('Failed to update status')
+        }
       } catch (error) {
-        console.error('Failed to update status:', error)
+        console.error('[StatusHandler] Error:', error)
       }
     }
 
-    // Обновляем статус при загрузке и каждые 30 секунд
+    const interval = setInterval(updateStatus, 60000)
     updateStatus()
-    const interval = setInterval(updateStatus, 30000)
 
-    // Обработчик выхода
-    const handleBeforeUnload = () => {
-      fetch('/api/users/offline', {
-        method: 'POST',
-        keepalive: true // Важно для отправки запроса даже при закрытии страницы
-      })
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [session?.user?.id])
+    return () => clearInterval(interval)
+  }, [session?.user?.id, status])
 
   return null
 } 

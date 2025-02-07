@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Server } from "socket.io"
+import { Prisma } from "@prisma/client"
 import type { Notification } from "@/types"
 
 export async function GET() {
@@ -28,52 +27,44 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const data = await request.json()
-    const notification = await prisma.notification.create({
-      data: {
-        ...data,
-        userId: session.user.id
-      }
+    const { title, message, type, link, metadata } = await req.json()
+    const notification = await createNotification({
+      userId: session.user.id,
+      title,
+      message,
+      type,
+      link,
+      metadata
     })
 
     return NextResponse.json(notification)
   } catch (error) {
-    return NextResponse.json({ message: "Internal Error" }, { status: 500 })
+    console.error("[NOTIFICATIONS_POST]", error)
+    return new NextResponse("Internal Error", { status: 500 })
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(req: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      )
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { id, read } = await request.json()
-    const notification = await prisma.notification.update({
-      where: {
-        id,
-        userId: session.user.id
-      },
-      data: { read }
-    })
+    const { id } = await req.json()
+    const notification = await markAsRead(id, session.user.id)
 
     return NextResponse.json(notification)
   } catch (error) {
-    return NextResponse.json(
-      { message: "Failed to update notification" },
-      { status: 500 }
-    )
+    console.error("[NOTIFICATIONS_PATCH]", error)
+    return new NextResponse("Internal Error", { status: 500 })
   }
 }
 
@@ -84,14 +75,14 @@ export async function createNotification({
   message,
   type,
   link,
-  metadata,
+  metadata
 }: {
   userId: string
   title: string
   message: string
   type: string
   link?: string
-  metadata?: any
+  metadata?: Record<string, any>
 }) {
   const notification = await prisma.notification.create({
     data: {
@@ -100,11 +91,11 @@ export async function createNotification({
       message,
       type,
       link,
-      metadata,
-    },
+      read: false,
+      metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : null
+    }
   })
 
-  // Используем глобальный io из res.socket.server.io
   if (global.io) {
     global.io.to(userId).emit("notification:new", notification)
   }

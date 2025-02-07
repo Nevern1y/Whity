@@ -1,36 +1,43 @@
+"use client"
+
+import { motion } from "framer-motion"
+
 export function AuthBackground() {
   return (
-    <div className="absolute inset-0 -z-10 overflow-hidden">
-      <svg
-        className="absolute h-full w-full stroke-primary/20"
-        viewBox="0 0 1000 1000"
-        aria-hidden="true"
-      >
-        <defs>
-          <pattern
-            id="grid"
-            x="50"
-            y="50"
-            width="100"
-            height="100"
-            patternUnits="userSpaceOnUse"
-          >
-            <path d="M0 100h100v-100" fill="none" strokeWidth="1.5" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" strokeWidth="0" fill="url(#grid)" />
-        <circle 
-          cx="500" 
-          cy="500" 
-          r="300" 
-          className="animate-pulse-slow" 
-          fill="none" 
-          strokeWidth="3"
-          strokeDasharray="10 20"
-        />
-      </svg>
-      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-background via-background/80 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background via-background/80 to-transparent" />
-    </div>
+    <>
+      {/* Градиентные круги */}
+      <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/20 blur-3xl" />
+      <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-primary/20 blur-3xl" />
+      
+      {/* Анимированная сетка */}
+      <div className="absolute inset-0 bg-grid-white/10 bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_20%,transparent_100%)]" />
+      
+      {/* Анимированные блики */}
+      <motion.div
+        className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/30 rounded-full blur-2xl"
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div
+        className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-primary/30 rounded-full blur-2xl"
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2 // Добавляем задержку для второго блика
+        }}
+      />
+    </>
   )
 } 

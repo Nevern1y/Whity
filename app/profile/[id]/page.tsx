@@ -100,6 +100,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <FriendActionButton 
           userId={params.id}
           initialStatus={friendshipStatus}
+          isSender={user.sentFriendships.some((f: { senderId: string }) => f.senderId === session.user.id)}
         />
       )}
     </ProfilePageContent>
@@ -139,4 +140,10 @@ function FriendsList({ sentFriendships, receivedFriendships }: any) {
       ))}
     </div>
   )
+}
+
+interface Friendship {
+  senderId: string
+  receiverId: string
+  status: string
 } 

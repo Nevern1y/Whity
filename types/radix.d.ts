@@ -36,13 +36,14 @@ declare module '@radix-ui/react-dialog' {
 declare module '@radix-ui/react-slot' {
   import * as React from 'react'
 
-  interface SlotProps extends React.HTMLAttributes<HTMLElement> {
-    asChild?: boolean
+  interface SlotProps {
     children?: React.ReactNode
+    asChild?: boolean
   }
 
-  const Slot: React.ForwardRefExoticComponent<SlotProps & React.RefAttributes<HTMLElement>>
-  export default Slot
+  export const Slot: React.ForwardRefExoticComponent<
+    SlotProps & React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement>
+  >
 }
 
 declare module '@radix-ui/react-dialog/dist/index' {

@@ -5,22 +5,12 @@ import { UserOnlineStatus } from "@/components/user-online-status"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useUserStatus } from "@/hooks/use-user-status"
-
-interface User {
-  id: string
-  name: string | null
-  email: string | null
-  image: string | null
-  isOnline: boolean
-  role?: string
-  friendshipStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
-  isIncoming?: boolean
-}
+import { User } from "@/types"
 
 interface UsersListProps {
   users: User[]
   selectedUserId?: string
-  onUserSelect?: (user: User) => void
+  onUserSelect: (user: User) => void
 }
 
 function UserListItem({ user, isSelected, onSelect }: { 
@@ -42,7 +32,7 @@ function UserListItem({ user, isSelected, onSelect }: {
         "p-3 hover:bg-muted/50 transition-colors cursor-pointer",
         isSelected && "bg-muted"
       )}
-      onClick={() => onSelect(updatedUser)} // Передаем обновленного пользователя
+      onClick={() => onSelect(updatedUser)}
     >
       <div className="flex items-center gap-3">
         <UserAvatar user={user} className="h-10 w-10" />
@@ -76,9 +66,7 @@ export function UsersList({ users, selectedUserId, onUserSelect }: UsersListProp
           key={user.id}
           user={user}
           isSelected={selectedUserId === user.id}
-          onSelect={(user) => {
-            if (onUserSelect) onUserSelect(user)
-          }}
+          onSelect={onUserSelect}
         />
       ))}
     </div>

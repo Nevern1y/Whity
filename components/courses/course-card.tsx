@@ -11,6 +11,8 @@ import { Level } from "@/types/prisma"
 import { cn } from "@/lib/utils"
 import { CourseActions } from "@/components/courses/course-actions"
 import { useMemo } from "react"
+import { Button } from "@/components/ui/button"
+import { DialogTrigger } from "@/components/ui/dialog"
 
 interface CourseCardProps {
   id: string

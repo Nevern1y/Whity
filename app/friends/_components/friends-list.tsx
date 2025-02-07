@@ -3,36 +3,37 @@
 import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Friendship, User } from "@prisma/client"
 import { useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
-import { motion } from "framer-motion"
 import { 
   MessageCircle, 
   UserMinus, 
-  UserX, 
-  Check, 
-  X,
-  UserCheck,
   Clock
 } from "lucide-react"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { useSocket, SOCKET_EVENTS } from "@/components/providers/socket-provider"
+import { useSocket } from "@/hooks/use-socket"
+import { SOCKET_EVENTS } from "@/components/providers/socket-provider"
 import { FriendRequestActions } from "@/components/friend-request-actions"
 import { FriendshipStatusBadge } from "@/components/friendship-status-badge"
-import { FriendshipWithUsers } from "@/types/friends"
+import { motion } from "framer-motion"
 
-interface Friend {
+interface FriendshipWithUsers {
   id: string
-  name: string | null
-  email: string | null
-  image: string | null
+  senderId: string
+  receiverId: string
+  status: string
+  sender: {
+    id: string
+    name: string | null
+    email: string | null
+    image: string | null
+  }
+  receiver: {
+    id: string
+    name: string | null
+    email: string | null
+    image: string | null
+  }
 }
 
 interface FriendsListProps {
@@ -40,8 +41,8 @@ interface FriendsListProps {
   currentUserId: string
 }
 
-export function FriendsList({ friendships, currentUserId }: FriendsListProps) {
-  const [friendshipsState, setFriendships] = useState(friendships)
+export function FriendsList({ friendships: initialFriendships, currentUserId }: FriendsListProps) {
+  const [friendships, setFriendships] = useState(initialFriendships)
   const [pendingActions, setPendingActions] = useState<Set<string>>(new Set())
   const { toast } = useToast()
   const socket = useSocket()
@@ -49,8 +50,7 @@ export function FriendsList({ friendships, currentUserId }: FriendsListProps) {
   useEffect(() => {
     if (!socket) return
 
-    // Обработка обновлений дружбы
-    const handleFriendshipUpdate = (data: { type: string, friendshipId: string }) => {
+    const handleFriendshipUpdate = (data: any) => {
       if (data.type === 'REMOVED') {
         setFriendships(prev => prev.filter(f => f.id !== data.friendshipId))
       } else if (data.type === 'ACCEPTED') {
@@ -67,6 +67,7 @@ export function FriendsList({ friendships, currentUserId }: FriendsListProps) {
     }
 
     socket.on(SOCKET_EVENTS.FRIENDSHIP_UPDATE, handleFriendshipUpdate)
+    
     return () => {
       socket.off(SOCKET_EVENTS.FRIENDSHIP_UPDATE, handleFriendshipUpdate)
     }
@@ -207,9 +208,23 @@ export function FriendsList({ friendships, currentUserId }: FriendsListProps) {
                     isIncoming ? (
                       <FriendRequestActions friendshipId={friendship.id} />
                     ) : (
-                      <Button variant="ghost" size="sm" disabled>
-                        <Clock className="h-4 w-4 mr-2" />
-                        Ожидание ответа
+                      <Button variant="ghost" size="sm" disabled className="gap-2">
+                        <motion.div
+                          animate={{ 
+                            rotate: 360
+                          }}
+                          transition={{ 
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "linear"
+                          }}
+                          style={{ 
+                            willChange: "transform"
+                          }}
+                        >
+                          <Clock className="h-4 w-4" />
+                        </motion.div>
+                        <span>Ожидание ответа</span>
                       </Button>
                     )
                   ) : (

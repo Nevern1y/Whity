@@ -3,14 +3,20 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 
 interface UserStore {
   userImage: string | null
+  userId: string | null
   setUserImage: (image: string | null) => void
+  setUserId: (id: string | null) => void
+  reset: () => void
 }
 
 export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
       userImage: null,
+      userId: null,
       setUserImage: (image) => set({ userImage: image }),
+      setUserId: (id) => set({ userId: id }),
+      reset: () => set({ userImage: null, userId: null })
     }),
     {
       name: 'user-storage',

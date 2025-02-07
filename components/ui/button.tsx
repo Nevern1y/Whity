@@ -1,13 +1,14 @@
 "use client"
 
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import type { LinkProps } from "next/link"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -32,15 +33,17 @@ const buttonVariants = cva(
   }
 )
 
-interface ButtonProps
+export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   href?: LinkProps["href"]
   className?: string
+  asChild?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, href, children, ...props }, ref) => {
+  ({ className, variant, size, href, children, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
     const classes = cn(buttonVariants({ variant, size, className }))
 
     if (href) {
@@ -52,16 +55,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     return (
-      <button
+      <Comp
         className={classes}
         ref={ref}
         {...props}
       >
         {children}
-      </button>
+      </Comp>
     )
   }
 )
 Button.displayName = "Button"
 
-export { Button, buttonVariants, type ButtonProps }
+export { Button, buttonVariants }

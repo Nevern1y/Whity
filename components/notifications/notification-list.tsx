@@ -8,8 +8,12 @@ import { Badge } from "@/components/ui/badge"
 import { formatDate } from "@/lib/utils"
 import { Bell, MessageSquare, Book, Trophy, Newspaper } from "lucide-react"
 import type { Notification } from "@/lib/notifications"
+import type { LucideIcon } from "lucide-react"
 
-const notificationIcons = {
+// Add type definition for notification types
+type NotificationType = 'message' | 'course' | 'achievement' | 'news' | 'system'
+
+const notificationIcons: Record<NotificationType, LucideIcon> = {
   message: MessageSquare,
   course: Book,
   achievement: Trophy,
@@ -80,7 +84,7 @@ export function NotificationList() {
     <AnimatePresence>
       <div className="space-y-4">
         {notifications.map((notification) => {
-          const Icon = notificationIcons[notification.type]
+          const Icon = notificationIcons[notification.type as NotificationType]
           return (
             <motion.div
               key={notification.id}

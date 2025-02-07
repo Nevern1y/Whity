@@ -18,7 +18,7 @@ model User {
   emailVerified       DateTime?
   image               String?
   hashedPassword      String?
-  role                UserRole          @default(USER)
+  role                String            @default("USER")
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   accounts            Account[]
@@ -170,18 +170,20 @@ model Lesson {
 }
 
 model Notification {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
   type      String
   title     String
   message   String
   link      String?
-  read      Boolean   @default(false)
-  readAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metadata  Json?
 
   @@index([userId])
+  @@map("notifications")
 }
 
 model Account {
@@ -234,14 +236,12 @@ model Friendship {
   id         String   @id @default(cuid())
   senderId   String
   receiverId String
-  status     String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  status     FriendshipStatus @default(NONE)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  sender     User     @relation("SentFriendships", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedFriendships", fields: [receiverId], references: [id])
 
-  sender   User @relation("SentFriendships", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver User @relation("ReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
-
-  @@unique([senderId, receiverId])
   @@index([senderId])
   @@index([receiverId])
 }
@@ -338,6 +338,7 @@ enum Role {
 }
 
 enum FriendshipStatus {
+  NONE
   PENDING
   ACCEPTED
   REJECTED
@@ -407,13 +408,13 @@ model SecurityLog {
 }
 
 model UserStatistics {
-  id             String @id @default(cuid())
-  userId         String @unique
-  totalTimeSpent Int    @default(0)
-  currentStreak  Int    @default(0)
-  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  totalTimeSpent  Int      @default(0)
+  currentStreak   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model StudySession {
@@ -434,17 +435,18 @@ model StudySession {
 }
 
 model UserSettings {
-  id            String @id @default(cuid())
-  userId        String @unique
-  theme         String @default("system")
-  fontSize      String @default("md")
-  language      String @default("ru")
-  timezone      String @default("Europe/Moscow")
-  notifications Json   @default("{\"email\":true,\"push\":false,\"sounds\":true,\"updates\":true,\"newsletter\":false}")
-
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  phone       String?
+  company     String?
+  language    String   @default("ru")
+  timezone    String   @default("Europe/Moscow")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  notifications Json? @default("{\"email\":true,\"push\":false,\"sounds\":true,\"updates\":true,\"newsletter\":false}")
+  
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
 }
 
 model UploadedFile {

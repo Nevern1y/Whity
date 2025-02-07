@@ -73,41 +73,45 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { content, receiverId } = await req.json()
+    const { recipientId, content } = await req.json()
 
-    if (!content || !receiverId) {
+    if (!content || !recipientId) {
       return new NextResponse("Missing required fields", { status: 400 })
     }
 
     // Проверяем существование получателя
     const receiver = await prisma.user.findUnique({
-      where: { id: receiverId }
+      where: { id: recipientId }
     })
 
     if (!receiver) {
       return new NextResponse("Recipient not found", { status: 404 })
     }
 
-    // Проверяем статус дружбы
+    // Проверяем статус дружбы в обоих направлениях
     const friendship = await prisma.friendship.findFirst({
       where: {
         OR: [
-          { 
-            senderId: session.user.id, 
-            receiverId,
-            status: 'ACCEPTED'
+          {
+            AND: [
+              { senderId: session.user.id },
+              { receiverId: recipientId },
+              { status: 'ACCEPTED' }
+            ]
           },
-          { 
-            senderId: receiverId, 
-            receiverId: session.user.id,
-            status: 'ACCEPTED'
+          {
+            AND: [
+              { senderId: recipientId },
+              { receiverId: session.user.id },
+              { status: 'ACCEPTED' }
+            ]
           }
         ]
       }
     })
 
     if (!friendship) {
-      return new NextResponse("You can only send messages to friends", { status: 403 })
+      return new NextResponse("Not friends", { status: 403 })
     }
 
     // Создаем сообщение с правильными связями
@@ -118,7 +122,7 @@ export async function POST(req: Request) {
           connect: { id: session.user.id }
         },
         receiver: {
-          connect: { id: receiverId }
+          connect: { id: recipientId }
         }
       },
       include: {
@@ -135,13 +139,13 @@ export async function POST(req: Request) {
     // Отправляем уведомление через сокет
     const io = getIO()
     if (io) {
-      io.to(receiverId).emit('new_message', message)
+      io.to(recipientId).emit('new_message', message)
     }
 
     // Создаем уведомление для получателя
     await prisma.notification.create({
       data: {
-        userId: receiverId,
+        userId: recipientId,
         type: 'NEW_MESSAGE',
         title: 'Новое сообщение',
         message: `${session.user.name || 'Пользователь'} отправил вам сообщение`,

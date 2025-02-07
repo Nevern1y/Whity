@@ -50,17 +50,19 @@ function convertMessage(message: ChatMessage, currentRecipientId: string): Messa
 
 interface MessageListProps {
   recipientId: string
-  friendshipStatus: string
   recipient: {
     id: string
     name: string | null
     image: string | null
     email: string | null
+    sentFriendships?: Array<{ status: string }>
+    receivedFriendships?: Array<{ status: string }>
   }
+  friendshipStatus?: string
   onClose: () => void
 }
 
-export function MessageList({ recipientId, friendshipStatus, recipient, onClose }: MessageListProps) {
+export function MessageList({ recipientId, recipient, friendshipStatus, onClose }: MessageListProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
@@ -104,7 +106,7 @@ export function MessageList({ recipientId, friendshipStatus, recipient, onClose 
         },
         body: JSON.stringify({
           content: newMessage.trim(),
-          receiverId: recipientId
+          recipientId: recipientId
         }),
       })
 
@@ -124,6 +126,8 @@ export function MessageList({ recipientId, friendshipStatus, recipient, onClose 
       setIsLoading(false)
     }
   }
+
+  const canSendMessage = friendshipStatus === 'ACCEPTED'
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -336,17 +340,17 @@ export function MessageList({ recipientId, friendshipStatus, recipient, onClose 
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={
-              friendshipStatus === 'ACCEPTED'
+              canSendMessage
                 ? "Введите сообщение..."
                 : "Добавьте пользователя в друзья для отправки сообщений"
             }
-            disabled={friendshipStatus !== 'ACCEPTED' || isLoading}
+            disabled={!canSendMessage || isLoading}
             className="bg-muted/50"
           />
           <Button 
             type="submit" 
             size="icon"
-            disabled={friendshipStatus !== 'ACCEPTED' || !newMessage.trim() || isLoading}
+            disabled={!canSendMessage || !newMessage.trim() || isLoading}
             className="shrink-0"
           >
             {isLoading ? (
