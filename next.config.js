@@ -59,6 +59,7 @@ const nextConfig = {
       },
     ]
   },
+  optimizeFonts: false,
   experimental: {
     optimizePackageImports: [
       '@radix-ui/react-icons',
@@ -67,7 +68,7 @@ const nextConfig = {
       'lucide-react'
     ],
     serverComponents: true,
-    optimizeCss: true,
+    optimizeCss: false,
   },
 }
 

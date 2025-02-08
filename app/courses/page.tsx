@@ -27,6 +27,7 @@ import {
 import { Level } from "@/types/prisma"
 import type { Course } from "@/types/prisma"
 import { CourseCard } from "@/components/courses/course-card"
+import { CreateCourseButton } from "@/components/course/create-course-button"
 
 export const revalidate = 60 // revalidate this page every 60 seconds
 
@@ -137,7 +138,7 @@ export default async function CoursesPage() {
         <h1 className="text-xl font-bold md:text-2xl">Курсы</h1>
         <div className="flex items-center gap-2">
           <Sheet>
-            <SheetTrigger>
+            <SheetTrigger asChild>
               <Button 
                 variant="outline" 
                 size="icon"
@@ -160,15 +161,7 @@ export default async function CoursesPage() {
             <CourseFilters />
           </div>
 
-          {isAdmin && (
-            <Link href="/courses/create" legacyBehavior passHref>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden md:inline">Создать курс</span>
-                <span className="md:hidden">Создать</span>
-              </Button>
-            </Link>
-          )}
+          {isAdmin && <CreateCourseButton />}
         </div>
       </div>
 

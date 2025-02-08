@@ -9,15 +9,15 @@ const features = [
     icon: Lightbulb,
     title: "Инновационный подход",
     description: "Современные методики обучения и передовые технологии в агропромышленности",
-    gradient: "from-green-500 to-emerald-600",
-    lightGradient: "from-green-100 to-emerald-200"
+    gradient: "from-orange-500 to-amber-600",
+    lightGradient: "from-orange-100 to-amber-200"
   },
   {
     icon: Brain,
     title: "Экспертные знания",
     description: "Курсы разработаны ведущими специалистами отрасли",
-    gradient: "from-blue-500 to-indigo-600",
-    lightGradient: "from-blue-100 to-indigo-200"
+    gradient: "from-amber-500 to-orange-600",
+    lightGradient: "from-amber-100 to-orange-200"
   },
   {
     icon: Target,

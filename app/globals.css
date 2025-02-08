@@ -14,30 +14,30 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
     
-    /* Зеленый для акцентов */
-    --primary: 142 72% 29%;     /* Приятный зеленый */
+    /* Оранжевый для акцентов */
+    --primary: 24 95% 50%;     /* Яркий оранжевый */
     --primary-foreground: 0 0% 100%;
     
     /* Нейтральные цвета */
-    --secondary: 240 4.8% 95.9%;  /* Светло-серый */
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 30 20% 96%;    /* Светло-оранжевый */
+    --secondary-foreground: 24 10% 10%;
     
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 30 20% 96%;
+    --muted-foreground: 24 10% 46%;
     
-    --accent: 142 72% 95%;      /* Очень светлый зеленый для акцентов */
-    --accent-foreground: 142 72% 29%;
+    --accent: 24 95% 96%;       /* Очень светлый оранжевый для акцентов */
+    --accent-foreground: 24 95% 50%;
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 142 72% 29%;
+    --ring: 24 95% 50%;
 
     --radius: 0.75rem;
 
-    /* Новые, более мягкие цвета для светлой темы с сиреневым оттенком */
+    /* Новые, более мягкие цвета для светлой темы с оранжевым оттенком */
     --background: 252 30% 98%;
     --card: 252 30% 99%;
     --popover: 252 30% 99%;
@@ -64,8 +64,8 @@
     /* Градиенты */
     --gradient-subtle: linear-gradient(
       to bottom right,
-      hsl(150 50% 35% / 0.1),
-      hsl(150 50% 35% / 0.05)
+      hsl(24 95% 50% / 0.1),
+      hsl(24 95% 50% / 0.05)
     );
    
     --gradient-card: linear-gradient(
@@ -85,9 +85,9 @@
     --shadow-lg: 0 5px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 2%));
     
     /* Градиенты */
-    --gradient-subtle: linear-gradient(to right bottom, hsl(142.1 76.2% 36.3%), hsl(142.1 76.2% 46.3%));
-    --gradient-vibrant: linear-gradient(to right bottom, hsl(142.1 76.2% 36.3%), hsl(160 84.1% 39.4%));
-    --gradient-text: linear-gradient(to right bottom, hsl(142.1 76.2% 36.3%), hsl(142.1 76.2% 26.3%));
+    --gradient-subtle: linear-gradient(to right bottom, hsl(24 95% 50% 0.3), hsl(24 95% 50% 0.2));
+    --gradient-vibrant: linear-gradient(to right bottom, hsl(24 95% 50% 0.3), hsl(24 95% 50% 0.4));
+    --gradient-text: linear-gradient(to right bottom, hsl(24 95% 50% 0.3), hsl(24 95% 50% 0.2));
     
     /* Эффекты */
     --blur-sm: blur(8px);
@@ -111,7 +111,7 @@
     --popover: 224 10% 12%;
     --popover-foreground: 0 0% 98%;
     
-    --primary: 142 72% 35%;      /* Зеленый для акцентов */
+    --primary: 24 95% 50%;      /* Оранжевый для акцентов */
     --primary-foreground: 0 0% 100%;
     
     --secondary: 224 10% 15%;    /* Серый для вторичных элементов */
@@ -120,7 +120,7 @@
     --muted: 224 10% 15%;
     --muted-foreground: 224 10% 70%;
     
-    --accent: 142 72% 15%;
+    --accent: 24 95% 20%;
     --accent-foreground: 0 0% 98%;
     
     --destructive: 0 62.8% 30.6%;
@@ -128,7 +128,7 @@
     
     --border: 224 10% 16%;
     --input: 224 10% 16%;
-    --ring: 142 72% 35%;
+    --ring: 24 95% 50%;
 
     /* Улучшенные эффекты для темной темы */
     --shadow-strength: 45%;
