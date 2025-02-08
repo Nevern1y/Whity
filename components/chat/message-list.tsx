@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { motion } from "framer-motion"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
@@ -68,11 +68,15 @@ export function MessageList({ recipientId, recipient, friendshipStatus, onClose 
   const [newMessage, setNewMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [recipientStatus, setRecipientStatus] = useState({ isOnline: false, lastActive: null })
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  const scrollToBottom = useCallback(() => {
+    if (shouldScrollToBottom && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [shouldScrollToBottom])
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -81,17 +85,36 @@ export function MessageList({ recipientId, recipient, friendshipStatus, onClose 
         const data = await res.json()
         setMessages(data.messages)
         setRecipientStatus(data.recipient)
+        setShouldScrollToBottom(true)
       } catch (error) {
         console.error('Failed to load messages:', error)
       }
     }
     
     loadMessages()
-    // Обновляем каждые 30 секунд
     const interval = setInterval(loadMessages, 30000)
-    
     return () => clearInterval(interval)
   }, [recipientId])
+
+  useEffect(() => {
+    if (shouldScrollToBottom) {
+      scrollToBottom()
+    }
+  }, [messages, shouldScrollToBottom, scrollToBottom])
+
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+      setShouldScrollToBottom(isNearBottom)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,7 +141,7 @@ export function MessageList({ recipientId, recipient, friendshipStatus, onClose 
       const message = await response.json()
       setMessages(prev => [...prev, message])
       setNewMessage("")
-      setTimeout(scrollToBottom, 100)
+      setShouldScrollToBottom(true)
     } catch (error) {
       console.error("Error sending message:", error)
       toast.error("Не удалось отправить сообщение")
@@ -282,7 +305,10 @@ export function MessageList({ recipientId, recipient, friendshipStatus, onClose 
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/20">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/20"
+      >
         {messages.map((message, index) => {
           const isCurrentUser = message.senderId === session?.user?.id
           const showAvatar = !isCurrentUser && 

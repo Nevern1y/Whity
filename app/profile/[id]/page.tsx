@@ -1,3 +1,5 @@
+"use client"
+
 import { Metadata } from "next"
 import { getServerSession } from "next-auth/next"
 import { redirect, notFound } from "next/navigation"
@@ -17,7 +19,7 @@ import { auth } from "@/lib/auth"
 import type { User, Activity, Achievement } from "@/types/prisma"
 import ProfileContent from './_components/profile-content'
 import { Badge } from "@/components/ui/badge"
-import { ProfilePageContent } from "./_components/profile-page-content"
+import { ProfilePageContent } from "@/components/profile/profile-page-content"
 import { FriendActionButton } from "@/components/friend-action-button"
 import { FriendshipValidator } from "@/lib/friendship-validator"
 import { ExtendedFriendshipStatus } from "@/lib/constants"
@@ -25,6 +27,9 @@ import {
   FriendshipStatusBadge,
   ProfilePageContent as NewProfilePageContent 
 } from "@/components"
+import { useSession } from "next-auth/react"
+import { DashboardButton } from "@/components/profile/dashboard-button"
+import { useRouter } from "next/navigation"
 
 interface ProfilePageProps {
   params: {
@@ -32,78 +37,185 @@ interface ProfilePageProps {
   }
 }
 
-export type ProfileFriendshipStatus = ExtendedFriendshipStatus | 'SELF'
-
-async function getFriendshipStatus(userId: string, targetUserId: string): Promise<ProfileFriendshipStatus> {
-  const friendship = await prisma.friendship.findFirst({
-    where: {
-      OR: [
-        { senderId: userId, receiverId: targetUserId },
-        { senderId: targetUserId, receiverId: userId }
-      ]
+interface ProfileData {
+  id: string
+  name: string | null
+  email: string | null
+  image: string | null
+  createdAt: Date
+  friendshipStatus: string
+  isOwnProfile: boolean
+  courseProgress: Array<{
+    completedAt: Date | null
+    progress: number
+  }>
+  userAchievements: Array<{
+    id: string
+    achievement: any
+  }>
+  courseRatings: Array<{
+    rating: number
+  }>
+  sentFriendships: Array<{
+    id: string
+    status: string
+    receiver: {
+      id: string
+      name: string | null
+      email: string | null
+      image: string | null
     }
-  })
-
-  return (friendship?.status as ProfileFriendshipStatus) || 'NONE'
+  }>
+  receivedFriendships: Array<{
+    id: string
+    status: string
+    sender: {
+      id: string
+      name: string | null
+      email: string | null
+      image: string | null
+    }
+  }>
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
-  const session = await auth()
-  if (!session?.user?.id) redirect("/login")
+export default function ProfilePage({ params }: ProfilePageProps) {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const [profileData, setProfileData] = useState<ProfileData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [imageError, setImageError] = useState(false)
+  const [isImageLoaded, setIsImageLoaded] = useState(false)
 
-  // Проверяем, существует ли пользователь с таким ID
-  const user = await prisma.user.findFirst({
-    where: {
-      id: params.id,
-    },
-    include: {
-      authoredCourses: true,
-      enrolledCourses: true,
-      courseProgress: true,
-      sentFriendships: {
-        include: {
-          receiver: true
+  useEffect(() => {
+    async function loadProfileData() {
+      try {
+        setIsLoading(true)
+        const response = await fetch(`/api/users/${params.id}`)
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError("Пользователь не найден")
+            return
+          }
+          throw new Error("Failed to load profile")
         }
-      },
-      receivedFriendships: {
-        include: {
-          sender: true
-        }
-      },
-      courseRatings: true,
-      userAchievements: {
-        include: {
-          achievement: true
-        }
+        
+        const data = await response.json()
+        setProfileData(data)
+      } catch (error) {
+        console.error("Error loading profile:", error)
+        setError("Ошибка загрузки профиля")
+      } finally {
+        setIsLoading(false)
       }
     }
-  })
 
-  if (!user) {
-    redirect('/friends')
+    loadProfileData()
+  }, [params.id])
+
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <Card className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-32 bg-muted rounded-lg" />
+            <div className="grid grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-24 bg-muted rounded-lg" />
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    )
   }
 
-  const isOwnProfile = session.user.id === params.id
-  const friendshipStatus = await FriendshipValidator.getFriendshipStatus(
-    session.user.id,
-    params.id
-  )
+  if (error || !profileData) {
+    return (
+      <div className="container py-8">
+        <Card className="p-6 text-center">
+          <p className="text-muted-foreground">{error || "Профиль не найден"}</p>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <ProfilePageContent 
-      params={params}
-      profileData={user}
-      isOwnProfile={isOwnProfile}
-      initialFriendshipStatus={friendshipStatus}
-    >
-      {!isOwnProfile && (
-        <FriendActionButton 
-          userId={params.id}
-          initialStatus={friendshipStatus}
-          isSender={user.sentFriendships.some((f: { senderId: string }) => f.senderId === session.user.id)}
-        />
-      )}
-    </ProfilePageContent>
+    <div className="container py-8 space-y-8">
+      {/* Profile Header */}
+      <div className="relative">
+        {/* Background Card with Gradient */}
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent">
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px]" />
+        </div>
+
+        {/* Main Profile Card */}
+        <Card className="relative mt-24">
+          {/* Avatar Overlay */}
+          <div className="absolute left-1/2 -translate-x-1/2 -top-16">
+            <div className="relative">
+              <div className="absolute -inset-4 bg-gradient-to-b from-white/50 to-white/10 dark:from-white/10 dark:to-white/5 rounded-full blur-sm" />
+              <Avatar className="relative w-32 h-32 border-4 border-background shadow-xl rounded-full overflow-hidden">
+                {profileData.image && !imageError ? (
+                  <AvatarImage
+                    src={profileData.image}
+                    className="object-cover"
+                    onLoad={() => setIsImageLoaded(true)}
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900 dark:to-orange-800">
+                    {profileData.name?.[0] || '?'}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+            </div>
+          </div>
+
+          {/* Content Container */}
+          <div className="pt-20 pb-6 px-6">
+            {/* User Info */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                {profileData.name}
+              </h1>
+              <p className="text-muted-foreground mt-1">{profileData.email}</p>
+              <p className="text-sm text-muted-foreground bg-orange-50 dark:bg-orange-500/5 px-3 py-1 rounded-full inline-block mt-2">
+                На сайте с {formatDistanceToNow(new Date(profileData.createdAt), { 
+                  addSuffix: true, 
+                  locale: ru 
+                })}
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="max-w-sm mx-auto space-y-3">
+              {profileData.isOwnProfile && (
+                <DashboardButton 
+                  userId={params.id} 
+                  currentUserId={session?.user?.id} 
+                />
+              )}
+              
+              {!profileData.isOwnProfile && session?.user && (
+                <FriendActionButton 
+                  userId={params.id}
+                  initialStatus={profileData.friendshipStatus}
+                />
+              )}
+            </div>
+          </div>
+        </Card>
+      </div>
+      
+      {/* Profile Content */}
+      <ProfilePageContent 
+        userId={params.id} 
+        session={session}
+        initialData={profileData}
+      />
+    </div>
   )
 }
 

@@ -1,55 +1,34 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { authConfig } from "@/lib/auth"
-import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import { getServerSession } from "next-auth"
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
-    console.group('[UpdateStatus]')
-    console.log('Headers:', Object.fromEntries(req.headers))
-    
-    const session = await getServerSession(authConfig)
-    console.log('Session Data:', {
-      exists: !!session,
-      userId: session?.user?.id,
-      hasToken: !!session?.accessToken
-    })
+    const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
-      console.warn('No valid session found')
-      console.groupEnd()
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { id: session.user.id }
-    })
-
-    if (!existingUser) {
-      console.warn('User not found in database')
-      console.groupEnd()
-      return new NextResponse("User not found", { status: 404 })
-    }
-
-    const updatedUser = await prisma.user.update({
+    await prisma.user.upsert({
       where: { id: session.user.id },
-      data: { 
+      update: { 
+        isOnline: true,
+        lastActive: new Date()
+      },
+      create: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
         isOnline: true,
         lastActive: new Date()
       }
     })
 
-    console.log('User Updated:', {
-      id: updatedUser.id,
-      isOnline: updatedUser.isOnline,
-      lastActive: updatedUser.lastActive
-    })
-    console.groupEnd()
-
-    return NextResponse.json(updatedUser)
+    return new NextResponse("Status updated", { status: 200 })
   } catch (error) {
-    console.error("[UpdateStatus] Error:", error)
-    console.groupEnd()
-    return new NextResponse("Internal Error", { status: 500 })
+    console.error("Error updating status:", error)
+    return new NextResponse("Internal error", { status: 500 })
   }
 } 

@@ -10,6 +10,8 @@ const nextConfig = {
     minimumCacheTTL: 60,
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96],
+    domains: ['localhost', 'your-domain.com'],
+    unoptimized: process.env.NODE_ENV !== 'production',
   },
   webpack: (config, { dev, isServer }) => {
     config.module.rules.push({
@@ -57,6 +59,23 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          }
+        ],
+      },
     ]
   },
   optimizeFonts: false,
@@ -67,9 +86,9 @@ const nextConfig = {
       'date-fns',
       'lucide-react'
     ],
-    serverComponents: true,
     optimizeCss: false,
   },
+  productionBrowserSourceMaps: false,
 }
 
 module.exports = nextConfig 

@@ -4,100 +4,106 @@
 
 @layer base {
   :root {
-    /* Светлая тема */
-    --background: 0 0% 100%;    /* Чистый белый фон */
+    /* Базовые цвета компонентов */
+    --component-bg: 30 25% 98%;
+    --component-border: 30 25% 90%;
+    --component-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    /* Обновленные переменные для светлой темы */
+    --background: 0 0% 98%;
     --foreground: 240 10% 3.9%;
     
-    --card: 0 0% 98%;          /* Слегка серый для карточек */
+    --card: var(--component-bg);
     --card-foreground: 240 10% 3.9%;
     
-    --popover: 0 0% 100%;
+    --popover: var(--component-bg);
     --popover-foreground: 240 10% 3.9%;
     
-    /* Оранжевый для акцентов */
-    --primary: 24 95% 50%;     /* Яркий оранжевый */
-    --primary-foreground: 0 0% 100%;
+    --primary: 24 96% 45%;
+    --primary-foreground: 0 0% 98%;
     
-    /* Нейтральные цвета */
-    --secondary: 30 20% 96%;    /* Светло-оранжевый */
-    --secondary-foreground: 24 10% 10%;
+    --secondary: var(--component-bg);
+    --secondary-foreground: 240 6% 10%;
     
-    --muted: 30 20% 96%;
-    --muted-foreground: 24 10% 46%;
+    --muted: 30 25% 96%;
+    --muted-foreground: 240 4% 46%;
     
-    --accent: 24 95% 96%;       /* Очень светлый оранжевый для акцентов */
-    --accent-foreground: 24 95% 50%;
+    --accent: var(--component-bg);
+    --accent-foreground: 240 6% 10%;
     
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 24 95% 50%;
+
+    --border: var(--component-border);
+    --input: var(--component-border);
+    --ring: 24 96% 45%;
+
+    /* Новые переменные для улучшенного визуального комфорта */
+    --surface-light: 30 25% 96%;  /* Поверхность элементов */
+    --surface-medium: 30 25% 94%; /* Средний уровень поверхности */
+    --surface-dark: 30 25% 92%;   /* Тёмный уровень поверхности */
 
     --radius: 0.75rem;
 
-    /* Новые, более мягкие цвета для светлой темы с оранжевым оттенком */
-    --background: 252 30% 98%;
-    --card: 252 30% 99%;
-    --popover: 252 30% 99%;
-    --secondary: 252 20% 94%;
-    --muted: 252 20% 96%;
-    --accent: 252 20% 94%;
-    --border: 252 20% 90%;
-
-    /* Обновляем тени для лучшей видимости */
-    --shadow-color: 220 40% 2%;
-    --shadow-strength: 2%;
-    --shadow-sm: 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
-    --shadow-md: 0 3px 5px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
-    --shadow-lg: 0 5px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 2%));
-
     /* Улучшенные эффекты */
-    --card-glow: 0 0 0 1px rgba(0, 0, 0, 0.03),
-                0 2px 4px rgba(0, 0, 0, 0.04),
-                0 4px 8px rgba(0, 0, 0, 0.02);
+    --card-glow: 0 0 0 1px rgba(0, 0, 0, 0.02),
+                0 2px 4px rgba(0, 0, 0, 0.03),
+                0 4px 8px rgba(0, 0, 0, 0.01);
    
-    --header-blur: blur(8px);
-    --header-bg: rgba(255, 255, 255, 0.7);
+    --header-blur: blur(12px);
+    --header-bg: rgba(252, 250, 248, 0.8);  /* Теплый полупрозрачный фон */
    
     /* Градиенты */
     --gradient-subtle: linear-gradient(
       to bottom right,
-      hsl(24 95% 50% / 0.1),
-      hsl(24 95% 50% / 0.05)
+      hsl(24 95% 50% / 0.08),
+      hsl(24 95% 50% / 0.03)
     );
    
     --gradient-card: linear-gradient(
       to bottom right,
-      hsl(var(--card)),
-      hsl(var(--background))
+      hsl(30 25% 98%),
+      hsl(30 25% 97%)
     );
+
+    /* Градиенты и тени */
+    --gradient-1: linear-gradient(to bottom right, hsl(30 25% 97%), hsl(30 25% 94%));
+    --gradient-2: linear-gradient(to bottom right, hsl(30 25% 96%), hsl(30 25% 92%));
+    
+    /* Тени с теплым оттенком */
+    --shadow-color: 30 20% 10%;
+    --shadow-strength: 2%;
+    --shadow-1: 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
+    --shadow-2: 0 3px 5px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
+
+    /* Обновленные цвета для карточек */
+    --card-bg: 0 0% 100%;
+    --card-border: 30 25% 90%;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    
+    /* Обновленные градиенты */
+    --card-gradient: linear-gradient(
+      to bottom right,
+      hsl(30 25% 98%),
+      hsl(30 25% 96%)
+    );
+    
+    /* Улучшенные эффекты для карточек */
+    --card-hover-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --card-hover-transform: translateY(-2px);
+    
+    /* Обновленные стили для контейнеров */
+    --container-bg: 0 0% 100%;
+    --container-border: 1px solid hsl(30 25% 90% / 0.5);
+    --container-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   /* Улучшенные стили для светлой темы */
   .light-theme {
-    /* Тени */
-    --shadow-color: 220 3% 15%;
-    --shadow-strength: 1%;
-    --shadow-sm: 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
-    --shadow-md: 0 3px 5px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
-    --shadow-lg: 0 5px 15px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 2%));
-    
-    /* Градиенты */
-    --gradient-subtle: linear-gradient(to right bottom, hsl(24 95% 50% 0.3), hsl(24 95% 50% 0.2));
-    --gradient-vibrant: linear-gradient(to right bottom, hsl(24 95% 50% 0.3), hsl(24 95% 50% 0.4));
-    --gradient-text: linear-gradient(to right bottom, hsl(24 95% 50% 0.3), hsl(24 95% 50% 0.2));
-    
-    /* Эффекты */
-    --blur-sm: blur(8px);
-    --blur-md: blur(12px);
-    --blur-lg: blur(16px);
-    
-    /* Анимации */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-medium: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 
   .dark {
@@ -165,6 +171,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: "rlig" 1, "calt" 1;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 /* Градиентная линия для мобильной версии */
@@ -393,21 +401,14 @@ h2 {
 /* Улучшенные стили для карточек */
 .card-hover {
   @apply transition-all duration-300;
-  background: linear-gradient(
-    to bottom right,
-    hsl(var(--card)),
-    hsl(var(--background))
-  );
-  box-shadow: 
-    0 1px 3px rgba(0, 0, 0, 0.05),
-    0 1px 2px rgba(0, 0, 0, 0.1);
+  background-color: hsl(var(--component-bg));
+  border: 1px solid hsl(var(--component-border));
+  box-shadow: var(--component-shadow);
 }
 
 .card-hover:hover {
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* В конец файла добавляем новые анимации */
@@ -611,7 +612,7 @@ h2 {
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: float 6s ease-in-out infinite;
 }
 
 .animate-bounce-slow {
@@ -634,11 +635,8 @@ h2 {
 
 /* Добавляем в конец файла */
 
-.bg-grid-white\/5 {
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
+.bg-grid-white {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.04)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
 }
 
 .glow {
@@ -793,20 +791,24 @@ body {
 }
 
 .wave-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-2px);
   box-shadow: 0px 12px 32px -9px rgba(0,0,0,0.55);
 }
 
 .wave {
   position: absolute;
-  width: 540px;
-  height: 700px;
+  width: 100%;
+  aspect-ratio: 1;
   opacity: 0.6;
-  left: 0;
-  top: 0;
-  margin-left: -50%;
-  margin-top: -70%;
-  background: linear-gradient(744deg, hsl(var(--primary)) 0%, hsl(var(--primary)) 60%, hsl(var(--primary)) 100%);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(
+    744deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--primary)) 60%,
+    hsl(var(--primary)) 100%
+  );
   border-radius: 40%;
   animation: wave 55s infinite linear;
 }
@@ -816,50 +818,67 @@ body {
   opacity: 0.4;
 }
 
-.wave:nth-child(3) {
-  animation-duration: 45s;
-  opacity: 0.2;
-}
-
 @keyframes wave {
-  0% {
-    transform: rotate(0deg);
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
   }
-  100% {
-    transform: rotate(360deg);
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
-/* Добавьте в конец файла */
+/* Медиа-запрос для мобильных устройств */
+@media (max-width: 768px) {
+  .wave {
+    width: 150%;
+  }
+  
+  .wave-card {
+    max-height: 300px;
+  }
+}
+
+/* Дополнительная оптимизация для маленьких экранов */
+@media (max-width: 480px) {
+  .wave {
+    width: 200%;
+  }
+}
+
+/* Обновляем стили для волновой анимации */
 .wave-section {
   position: relative;
   background: transparent;
   overflow: hidden;
   border-radius: 24px;
   box-shadow: 0px 8px 28px -9px rgba(0,0,0,0.45);
+  min-height: 200px; /* Добавляем минимальную высоту */
 }
 
 .wave-section .wave {
   position: absolute;
-  width: 540px;
-  height: 700px;
+  width: 80%; /* Уменьшаем размер волны */
+  height: 80%; /* Уменьшаем размер волны */
   opacity: 0.6;
-  left: 0;
-  top: 0;
-  margin-left: -50%;
-  margin-top: -70%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   background: linear-gradient(744deg, hsl(var(--primary)) 0%, hsl(var(--primary)) 60%, hsl(var(--secondary)) 100%);
   border-radius: 40%;
   animation: wave 55s infinite linear;
 }
 
 .wave-section .wave:nth-child(2) {
+  width: 70%; /* Уменьшаем размер второй волны */
+  height: 70%;
   animation-duration: 50s;
   opacity: 0.4;
   background: linear-gradient(744deg, hsl(var(--secondary)) 0%, hsl(var(--primary)) 60%, hsl(var(--primary)) 100%);
 }
 
 .wave-section .wave:nth-child(3) {
+  width: 60%; /* Уменьшаем размер третьей волны */
+  height: 60%;
   animation-duration: 45s;
   opacity: 0.2;
   background: linear-gradient(744deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 60%, hsl(var(--primary)) 100%);
@@ -869,6 +888,59 @@ body {
   position: relative;
   z-index: 1;
   backdrop-filter: blur(5px);
+}
+
+@keyframes wave {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Медиа-запрос для мобильных устройств */
+@media (max-width: 768px) {
+  .wave-section {
+    max-height: 300px;
+  }
+  
+  .wave-section .wave {
+    width: 70%;
+    height: 70%;
+  }
+  
+  .wave-section .wave:nth-child(2) {
+    width: 60%;
+    height: 60%;
+  }
+  
+  .wave-section .wave:nth-child(3) {
+    width: 50%;
+    height: 50%;
+  }
+}
+
+/* Дополнительная оптимизация для маленьких экранов */
+@media (max-width: 480px) {
+  .wave-section {
+    max-height: 250px;
+  }
+  
+  .wave-section .wave {
+    width: 60%;
+    height: 60%;
+  }
+  
+  .wave-section .wave:nth-child(2) {
+    width: 50%;
+    height: 50%;
+  }
+  
+  .wave-section .wave:nth-child(3) {
+    width: 40%;
+    height: 40%;
+  }
 }
 
 /* Добавьте в конец файла */
@@ -952,9 +1024,9 @@ body {
 
 /* Паттерны */
 .bg-grid-pattern {
-  background-image: linear-gradient(to right, rgba(var(--primary-rgb), 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--primary-rgb), 0.1) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-size: 32px 32px;
+  background-image: linear-gradient(to right, rgba(128, 128, 128, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(128, 128, 128, 0.05) 1px, transparent 1px);
 }
 
 .bg-dots-pattern {
@@ -963,7 +1035,7 @@ body {
 }
 
 .bg-gradient-radial {
-  background: radial-gradient(circle at center, var(--primary-color) 0%, transparent 70%);
+  background-image: radial-gradient(circle at center, var(--tw-gradient-from) 0%, var(--tw-gradient-to) 100%);
 }
 
 .pattern-waves {
@@ -1008,7 +1080,16 @@ body {
   }
 
   .bg-grid-white {
-    background-image: url("data:image/svg+xml,..."); /* Добавьте SVG паттерн */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.04)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+  }
+
+  .bg-soft {
+    background-color: hsl(30 25% 97% / 0.8);
+    backdrop-filter: blur(8px);
+  }
+  
+  .text-soft {
+    color: hsl(240 10% 3.9% / 0.9);
   }
 }
 
@@ -1049,7 +1130,7 @@ body {
 /* Улучшенные стили для светлой темы */
 .light-theme {
   /* Фон и тени */
-  --shadow-color: 220 3% 15%;
+  --shadow-color: 30 20% 10%;
   --shadow-strength: 1%;
   --shadow-1: 0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 9%));
   --shadow-2: 0 3px 5px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
@@ -1059,7 +1140,7 @@ body {
   --gradient-2: linear-gradient(to bottom, hsl(240 4.8% 95.9%), hsl(0 0% 100%));
   
   /* Цвета компонентов */
-  --header-bg: rgba(255, 255, 255, 0.8);
+  --header-bg: rgba(252, 250, 248, 0.8);
   --card-bg: var(--gradient-1);
   --button-hover: hsl(240 4.8% 95.9%);
 }
@@ -1207,4 +1288,158 @@ body {
     border-bottom: 1px solid hsl(var(--border) / 0.5);
   }
 }
+
+/* Обновленные стили для компонентов */
+.card, .input, .button {
+  background-color: hsl(var(--component-bg));
+  border: 1px solid hsl(var(--component-border));
+  box-shadow: var(--component-shadow);
+}
+
+/* Стили для мобильной анимации */
+@media (max-width: 768px) {
+  .animated-container {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .animated-content {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .animated-text {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* Обновленные стили для градиентов */
+  .gradient-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      transparent,
+      hsl(var(--background)) 90%
+    );
+    pointer-events: none;
+  }
+}
+
+/* Обновленные стили для форм */
+.form-container {
+  background-color: hsl(var(--component-bg));
+  border-radius: 1rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Анимации с ограничением */
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.slide-animation {
+  animation: slide-in 0.3s ease-out;
+  overflow: hidden;
+}
+
+/* Обновленные стили для карточек на главной странице */
+.feature-card {
+  @apply relative rounded-xl p-6;
+  background: var(--card-gradient);
+  border: var(--container-border);
+  box-shadow: var(--card-shadow);
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  box-shadow: var(--card-hover-shadow);
+  transform: var(--card-hover-transform);
+}
+
+/* Улучшенный контейнер для карточек */
+.features-container {
+  @apply grid gap-6 p-4 sm:p-6 md:p-8;
+  background: linear-gradient(
+    to bottom right,
+    hsl(0 0% 100% / 0.8),
+    hsl(0 0% 100% / 0.5)
+  );
+  border: var(--container-border);
+  border-radius: 1rem;
+  backdrop-filter: blur(8px);
+}
+
+/* Обновленные стили для текста в карточках */
+.feature-card h3 {
+  @apply text-lg font-semibold mb-2;
+  color: hsl(240 6% 10%);
+}
+
+.feature-card p {
+  @apply text-sm leading-relaxed;
+  color: hsl(240 4% 46%);
+}
+
+/* Улучшенные стили для иконок */
+.feature-icon {
+  @apply mb-4 p-3 rounded-lg;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary) / 0.1),
+    hsl(var(--primary) / 0.2)
+  );
+  color: hsl(var(--primary));
+}
+
+/* Адаптивные стили для мобильных устройств */
+@media (max-width: 768px) {
+  .feature-card {
+    @apply p-4;
+  }
+  
+  .features-container {
+    @apply gap-4 p-4;
+  }
+}
+
+/* Анимация появления карточек */
+.feature-card {
+  animation: card-appear 0.5s ease-out;
+  animation-fill-mode: backwards;
+}
+
+@keyframes card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Добавляем задержку для каждой следующей карточки */
+.feature-card:nth-child(1) { animation-delay: 0.1s; }
+.feature-card:nth-child(2) { animation-delay: 0.2s; }
+.feature-card:nth-child(3) { animation-delay: 0.3s; }
+.feature-card:nth-child(4) { animation-delay: 0.4s; }
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -12,7 +12,6 @@ import { AddFriendButton } from "@/components/add-friend-button"
 import { MessageList } from "@/components/chat/message-list"
 import { cn } from "@/lib/utils"
 import { UserAvatar } from "@/components/user-avatar"
-import { useSearchParams } from "next/navigation"
 import { socketClient } from "@/lib/socket-client"
 import { toast } from "react-hot-toast"
 import { UsersList } from "@/components/users-list"
@@ -48,17 +47,16 @@ export default function MessagesPage() {
   useEffect(() => {
     const loadFriends = async () => {
       try {
-        setIsLoading(true)
-        const response = await fetch('/api/friends')
-        console.log('Friends API Response:', response.status)
+        if (!session?.user?.id) return
         
-        if (!response.ok) {
-          console.error('Friends API Error:', await response.text())
-          throw new Error('Failed to load friends')
-        }
+        setIsLoading(true)
+        const response = await fetch('/api/friends', {
+          cache: 'force-cache', // Используем кэширование
+        })
+        
+        if (!response.ok) throw new Error('Failed to load friends')
         
         const data = await response.json()
-        console.log('Friends Data:', data)
         setFriends(data)
         setFriendsList(data)
       } catch (error) {
@@ -68,20 +66,16 @@ export default function MessagesPage() {
       }
     }
 
-    if (session?.user?.id) {
-      loadFriends()
-    }
+    loadFriends()
   }, [session?.user?.id])
 
   useEffect(() => {
     if (!session?.user?.id) return
 
     const socket = socketClient.getSocket()
-    if (!socket) return
-
-    const userId = session.user.id
-    socket.emit('join_user', userId)
-
+    const userId = session.user.id // Capture the id in scope
+    
+    // Define handlers with guaranteed session context
     const handleFriendRequest = (data: { senderId: string; status: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' }) => {
       setFriends(prev => prev.map(friend => 
         friend.id === data.senderId 
@@ -103,9 +97,15 @@ export default function MessagesPage() {
         toast.success('Запрос в друзья принят')
       }
     }
+    
+    // Set up socket connection
+    function setupSocket() {
+      socket.emit('join_user', userId)
+      socket.on('friend_request', handleFriendRequest)
+      socket.on('friend_request_response', handleFriendRequestResponse)
+    }
 
-    socket.on('friend_request', handleFriendRequest)
-    socket.on('friend_request_response', handleFriendRequestResponse)
+    setupSocket()
 
     return () => {
       socket.emit('leave_user', userId)

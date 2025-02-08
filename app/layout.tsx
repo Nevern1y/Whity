@@ -17,8 +17,19 @@ import { WebSocketProvider } from '@/providers/websocket-provider'
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
 export const metadata: Metadata = {
-  title: "Агропромышленная платформа",
-  description: "Образовательная платформа для специалистов агропромышленного комплекса",
+  title: {
+    default: "АЛЛЕЛЬ АГРО",
+    template: "%s | АЛЛЕЛЬ АГРО"
+  },
+  description: "Образовательная платформа для специалистов агропромышленности",
+  icons: {
+    icon: [
+      {
+        url: '/favicon.svg',
+        type: 'image/svg+xml',
+      }
+    ]
+  }
 }
 
 export default async function RootLayout({

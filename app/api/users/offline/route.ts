@@ -3,59 +3,37 @@ import { checkAuth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { emitSocketEvent } from "@/lib/socket-server"
 
-interface OfflineResponse {
-  success: boolean
-  user: {
-    id: string
-    isOnline: boolean
-    lastActive: Date | null
-  }
-}
-
-export async function POST(): Promise<NextResponse<OfflineResponse>> {
+export async function POST(req: Request) {
   try {
-    console.log("[OFFLINE] Starting offline status update")
-    
-    // Проверяем заголовки запроса
     const session = await checkAuth()
-    console.log("[OFFLINE] Session check:", { 
-      hasSession: !!session,
-      userId: session?.user?.id,
-      cookies: !!session?.user?.id
-    })
-
-    if (!session) {
-      console.log("[OFFLINE] No session found")
+    if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const user = await prisma.user.update({
+    const user = await prisma.user.upsert({
       where: { id: session.user.id },
-      data: { 
+      update: { 
         isOnline: false,
         lastActive: new Date()
       },
-      select: {
-        id: true,
-        isOnline: true,
-        lastActive: true
+      create: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        isOnline: false,
+        lastActive: new Date()
       }
     })
-    console.log("[OFFLINE] User status updated:", { 
-      userId: user.id, 
-      isOnline: user.isOnline 
+
+    // Emit socket event for real-time updates
+    emitSocketEvent('user_status', { 
+      userId: session.user.id, 
+      isOnline: false 
     })
 
-    // Оповещаем через сокеты
-    emitSocketEvent("user:status", {
-      userId: user.id,
-      isOnline: false,
-      lastActive: user.lastActive
-    })
-
-    return NextResponse.json({ success: true, user })
+    return new NextResponse(null, { status: 204 })
   } catch (error) {
-    console.error("[OFFLINE_ERROR]", error)
-    return new NextResponse("Internal Error", { status: 500 })
+    console.error("Error setting offline status:", error)
+    return new NextResponse("Internal error", { status: 500 })
   }
 } 

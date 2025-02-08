@@ -3,73 +3,71 @@ import type { ClientToServerEvents, ServerToClientEvents } from "@/types/socket"
 
 class SocketClient {
   private socket: Socket | null = null
-  private static instance: SocketClient
+  private isInitialized = false
 
-  private constructor() {}
-
-  static getInstance(): SocketClient {
-    if (!SocketClient.instance) {
-      SocketClient.instance = new SocketClient()
-    }
-    return SocketClient.instance
-  }
-
-  connect() {
-    if (!this.socket) {
-      this.socket = io({
+  getSocket(): Socket {
+    if (!this.socket || !this.isInitialized) {
+      this.socket = io(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000", {
         path: "/api/socket.io",
-        addTrailingSlash: false,
-        reconnection: true,
+        autoConnect: true,
+        withCredentials: true,
+        transports: ['websocket', 'polling'],
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
-        autoConnect: false,
-        transports: ['websocket', 'polling']
       })
 
       this.socket.on("connect", () => {
-        console.log("[Socket] Connected:", this.socket?.id)
+        console.log("Socket connected")
+        this.isInitialized = true
+      })
+
+      this.socket.on("disconnect", () => {
+        console.log("Socket disconnected")
+        this.isInitialized = false
       })
 
       this.socket.on("connect_error", (error) => {
-        console.error("[Socket] Connection error:", error.message)
+        console.error("Socket connection error:", error)
+        this.isInitialized = false
       })
-
-      this.socket.connect()
     }
-    return this.socket
-  }
 
-  getSocket() {
-    return this.socket || this.connect()
+    return this.socket
   }
 
   disconnect() {
     if (this.socket) {
       this.socket.disconnect()
       this.socket = null
+      this.isInitialized = false
     }
   }
 
-  emit<T extends keyof ClientToServerEvents>(
-    event: T,
-    ...args: Parameters<ClientToServerEvents[T]>
-  ) {
-    this.socket?.emit(event, ...args)
+  emit(event: string, data: any): void {
+    const socket = this.getSocket()
+    socket.emit(event, data)
   }
 
-  on<T extends keyof ServerToClientEvents>(
-    event: T,
-    listener: ServerToClientEvents[T]
-  ) {
-    this.socket?.on(event, listener as any)
+  // Add dashboard event handlers
+  onDashboardStats(callback: (data: any) => void): () => void {
+    const socket = this.getSocket()
+    socket.on("dashboard_stats", callback)
+    return () => socket.off("dashboard_stats", callback)
   }
 
-  off<T extends keyof ServerToClientEvents>(
-    event: T,
-    listener: ServerToClientEvents[T]
-  ) {
-    this.socket?.off(event, listener as any)
+  onDashboardUpdate(callback: (data: any) => void): () => void {
+    const socket = this.getSocket()
+    socket.on("dashboard_update", callback)
+    return () => socket.off("dashboard_update", callback)
+  }
+
+  joinDashboard(userId: string): void {
+    this.emit("join_dashboard", userId)
+  }
+
+  leaveDashboard(userId: string): void {
+    this.emit("leave_dashboard", userId)
   }
 }
 
-export const socketClient = SocketClient.getInstance() 
+export const socketClient = new SocketClient() 

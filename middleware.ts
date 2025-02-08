@@ -5,27 +5,21 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
 export async function middleware(request: NextRequest) {
-  console.log(`[Middleware] Processing ${request.method} ${request.nextUrl.pathname}`)
-
-  // Если это API запрос или WebSocket, пропускаем
+  // Пропускаем статические файлы и API запросы
   if (
-    request.nextUrl.pathname.startsWith('/api/') ||
+    request.nextUrl.pathname.startsWith('/_next') ||
+    request.nextUrl.pathname.startsWith('/api/socket.io') ||
+    request.nextUrl.pathname.startsWith('/static') ||
     request.headers.get("upgrade") === "websocket"
   ) {
-    console.log('[Middleware] Skipping API/WebSocket request')
     return NextResponse.next()
   }
 
-  // Кэшируем результат getToken для одного запроса
-  const tokenPromise = getToken({ 
+  const token = await getToken({ 
     req: request,
     secret: process.env.NEXTAUTH_SECRET 
   })
-  
-  const token = await tokenPromise
-  
-  console.log('[Middleware] Token:', token ? 'exists' : 'missing')
-  
+
   // Защищенные роуты
   const protectedPaths = ['/admin', '/courses/create', '/settings', '/profile', '/messages']
   const isProtectedPath = protectedPaths.some(path => 
@@ -96,11 +90,14 @@ export async function middleware(request: NextRequest) {
 // Обновляем конфигурацию matcher
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-    "/api/users/:path*",
-    "/api/friends/:path*",
-    "/api/messages/:path*",
-    "/messages/:path*"
-  ]
+    /*
+     * Match all request paths except:
+     * 1. /api/ (API routes)
+     * 2. /_next/ (Next.js internals)
+     * 3. /static (static files)
+     * 4. /*.* (files with extensions)
+     */
+    '/((?!api|_next|static|[\\w-]+\\.\\w+).*)',
+  ],
 }
 

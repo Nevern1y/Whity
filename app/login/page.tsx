@@ -1,181 +1,153 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { LogIn, Mail, Lock } from "lucide-react"
-import { AuthBackground } from "@/components/auth/auth-background"
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { AuthBackground } from '@/components/auth/auth-background'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import { signIn } from 'next-auth/react'
+import { useState } from 'react'
+import { ClientOnly } from '@/components/client-only'
 
-function Logo(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg 
-      fill="none" 
-      height="48" 
-      viewBox="0 0 44 48" 
-      width="44" 
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-24 w-24"
-      {...props}
-    >
-      <g fill="currentColor">
-        <path d="m30.8 10.7998h-30.8l4.4 8.7999h26.4c4.8601 0 8.8 3.9399 8.8 8.8s-3.9399 8.7999-8.8 8.7999c7.2902 0 13.2-5.9098 13.2-13.1999s-5.9098-13.1999-13.2-13.1999z"/>
-        <path d="m20.7835 34.7676c-1.4628-2.9255.6646-6.3677 3.9354-6.3677h6.0807c2.4301 0 4.4 1.9699 4.4 4.4 0 2.43-1.9699 4.3999-4.4 4.3999h-6.0807c-1.6665 0-3.1901-.9416-3.9354-2.4322z" opacity=".3"/>
-        <path d="m30.8008 19.6001h-22.00002l4.40002 8.7999h17.6c2.43 0 4.4 1.97 4.4 4.4 0 2.4301-1.97 4.4-4.4 4.4 4.8601 0 8.8-3.9399 8.8-8.8 0-4.86-3.9399-8.7999-8.8-8.7999z" opacity=".6"/>
-      </g>
-    </svg>
-  )
-}
+const formSchema = z.object({
+  email: z.string().email('Введите корректный email'),
+  password: z.string().min(6, 'Минимум 6 символов'),
+})
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [isLoading, setIsLoading] = useState(false)
+  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard'
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
 
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const result = await signIn("credentials", {
+      setIsLoading(true)
+      const result = await signIn('credentials', {
+        ...values,
         redirect: false,
-        email,
-        password,
       })
 
       if (result?.error) {
-        toast.error("Неверный email или пароль")
-      } else {
-        router.push("/dashboard")
-        toast.success("Добро пожаловать!")
+        throw new Error(result.error)
       }
+
+      toast.success('Вход выполнен успешно')
+      router.push(callbackUrl)
+      router.refresh()
     } catch (error) {
-      toast.error("Произошла ошибка при входе")
+      toast.error(error instanceof Error ? error.message : 'Ошибка входа')
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden bg-gradient-to-br from-background via-background/95 to-background">
-      <AuthBackground />
-      
-      <div className="w-full max-w-[400px] space-y-8 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-4"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="email@example.com" 
+                  type="email" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Пароль</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Введите пароль" 
+                  type="password" 
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button 
+          type="submit" 
+          className="w-full"
+          disabled={isLoading}
         >
-          <Link href="/" className="inline-block group">
-            <Logo className="mx-auto text-primary group-hover:text-primary/80 transition-all duration-300 transform group-hover:scale-110" />
-          </Link>
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
-              С возвращением!
-            </h1>
-            <p className="text-base text-muted-foreground">
-              Войдите в свой аккаунт для продолжения
-            </p>
+          Войти
+        </Button>
+      </form>
+    </Form>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <div className="min-h-screen relative flex flex-col items-center justify-center bg-surface-light">
+      {/* Фоновый компонент на весь экран */}
+      <div className="absolute inset-0">
+        <AuthBackground />
+      </div>
+
+      {/* Основной контейнер */}
+      <div className="relative w-full max-w-[400px] p-6 z-10">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+            Вход в систему
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Войдите в свой аккаунт
+          </p>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/30 via-surface-medium/50 to-surface-light/20 rounded-2xl" />
+          <div className="relative bg-surface-light/40 dark:bg-background/50 p-8 rounded-2xl shadow-sm border border-orange-100/10 dark:border-orange-400/10">
+            <ClientOnly>
+              <LoginForm />
+            </ClientOnly>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="border-none shadow-2xl backdrop-blur-md bg-card/50">
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={isLoading}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Пароль</Label>
-                    <Link 
-                      href="/forgot-password"
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Забыли пароль?
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <motion.div
-                        className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      Вход...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Войти
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-center text-sm text-muted-foreground"
-        >
-          Нет аккаунта?{" "}
-          <Link 
-            href="/register" 
-            className="text-primary hover:text-primary/80 font-medium transition-colors"
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          Нет аккаунта?{' '}
+          <Link
+            href="/register"
+            className="font-medium text-orange-600 dark:text-orange-300 hover:underline"
           >
             Зарегистрироваться
           </Link>
-        </motion.p>
+        </p>
       </div>
     </div>
   )

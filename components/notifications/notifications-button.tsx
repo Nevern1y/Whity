@@ -81,7 +81,8 @@ export function NotificationsButton() {
             : "w-[400px]",
           "bg-gradient-to-b from-background to-muted/30",
           "backdrop-blur-[var(--blur-sm)]",
-          "transition-transform duration-300 ease-in-out"
+          "transition-transform duration-300 ease-in-out",
+          "[&_button[aria-label='Close']]:hidden"
         )}
       >
         <SheetHeader className={cn(
@@ -97,39 +98,22 @@ export function NotificationsButton() {
             )}>
               Уведомления
             </SheetTitle>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size={isMobile ? "sm" : "default"}
-                  className={cn(
-                    "text-muted-foreground hover:text-primary",
-                    "transition-colors duration-200",
-                    isMobile && "text-sm py-1 h-8"
-                  )}
-                  onClick={() => {
-                    markAllAsRead()
-                  }}
-                >
-                  Прочитать все
-                </Button>
-              )}
+            {unreadCount > 0 && (
               <Button 
                 variant="ghost" 
-                size="icon"
+                size={isMobile ? "sm" : "default"}
                 className={cn(
-                  "rounded-full",
-                  "hover:bg-destructive/10 hover:text-destructive",
+                  "text-muted-foreground hover:text-primary",
                   "transition-colors duration-200",
-                  "active:scale-95",
-                  isMobile && "h-8 w-8"
+                  isMobile && "text-sm py-1 h-8"
                 )}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  markAllAsRead()
+                }}
               >
-                <X className={cn("h-4 w-4", isMobile && "h-3 w-3")} />
-                <span className="sr-only">Закрыть</span>
+                Прочитать все
               </Button>
-            </div>
+            )}
           </div>
         </SheetHeader>
         

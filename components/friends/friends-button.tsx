@@ -69,21 +69,23 @@ export function FriendsButton() {
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger>
-          <Link href="/friends" className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-            >
-              <Users className="h-5 w-5" />
-            </Button>
-            {pendingRequests > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 text-xs flex items-center justify-center bg-red-500 text-white rounded-full">
-                {pendingRequests}
-              </span>
-            )}
-          </Link>
+        <TooltipTrigger asChild>
+          <div className="relative">
+            <Link href="/friends">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+              >
+                <Users className="h-5 w-5" />
+              </Button>
+              {pendingRequests > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 text-xs flex items-center justify-center bg-red-500 text-white rounded-full">
+                  {pendingRequests}
+                </span>
+              )}
+            </Link>
+          </div>
         </TooltipTrigger>
         <TooltipContent>
           <p>Друзья</p>

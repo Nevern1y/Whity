@@ -1,4 +1,4 @@
-import NextAuth, { type NextAuthOptions } from "next-auth"
+import NextAuth, { type NextAuthOptions, type User } from "next-auth"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -12,17 +12,9 @@ import { cache } from 'react'
 // Кэшируем адаптер
 const adapter = cache(() => PrismaAdapter(prisma))()
 
-export const authConfig: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    GithubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    }),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -30,78 +22,94 @@ export const authConfig: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            throw new Error('Email and password are required')
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              hashedPassword: true,
+              role: true,
+              emailVerified: true,
+            },
+          })
+
+          if (!user || !user.hashedPassword) {
+            throw new Error('No user found with this email')
+          }
+
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.hashedPassword
+          )
+
+          if (!isPasswordValid) {
+            throw new Error('Invalid password')
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role as UserRole,
+            emailVerified: user.emailVerified,
+          }
+        } catch (error) {
+          console.error("[AUTH] Error:", error)
+          throw error
         }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        })
-
-        if (!user || !user.hashedPassword) {
-          return null
-        }
-
-        const isValid = await compare(credentials.password, user.hashedPassword)
-        if (!isValid) {
-          return null
-        }
-
-        return user
       }
     })
   ],
   session: {
-    strategy: "jwt",
-  },
-  callbacks: {
-    async session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub
-      }
-      return session
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = user.role
-      }
-      return token
-    }
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: '/login',
-    error: '/error',
-  },
-  events: {
-    async signOut({ token }) {
-      if (token?.sub) {
-        await prisma.user.update({
-          where: { id: token.sub },
-          data: { 
-            isOnline: false,
-            lastActive: new Date()
-          }
-        })
-      }
-    }
+    signOut: '/login',
+    error: '/login',
   },
   debug: process.env.NODE_ENV === 'development',
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+        token.email = user.email
+        token.role = user.role as UserRole
+        token.emailVerified = user.emailVerified
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id
+        session.user.role = token.role as UserRole
+        session.user.emailVerified = token.emailVerified
+      }
+      return session
+    },
+  },
 }
 
 // Создаем и экспортируем auth функции
-const handler = NextAuth(authConfig)
+const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }
 
 // Хелпер для проверки авторизации
 export async function auth() {
-  return await getServerSession(authConfig)
+  return await getServerSession(authOptions)
 }
 
 // Хелпер для проверки авторизации
 export async function checkAuth() {
   console.log("[AUTH] Checking auth...")
-  const session = await getServerSession(authConfig)
+  const session = await getServerSession(authOptions)
   console.log("[AUTH] Session:", {
     exists: !!session,
     userId: session?.user?.id,

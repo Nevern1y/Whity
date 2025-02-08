@@ -55,19 +55,32 @@ export function initSocketServer(req: NextApiRequest, res: NextApiResponseServer
       socket.on("disconnect", () => {
         console.log("Socket disconnected:", socket.id)
       })
+
+      // Dashboard events
+      socket.on('join_dashboard', async (userId: string) => {
+        socket.join(`dashboard:${userId}`)
+        
+        // Send initial stats
+        const stats = await getDashboardStats(userId)
+        socket.emit('dashboard_stats', stats)
+      })
+
+      socket.on('leave_dashboard', (userId: string) => {
+        socket.leave(`dashboard:${userId}`)
+      })
     })
   }
   return res.socket.server.io
 }
 
-export function getIO() {
+export function getIO(): ServerIO | null {
   if (typeof global.io !== 'undefined') {
     return global.io
   }
   return null
 }
 
-export function emitSocketEvent(event: string, data: any) {
+export function emitSocketEvent(event: string, data: any): void {
   const io = getIO()
   if (io) {
     io.emit(event, data)
@@ -218,4 +231,72 @@ export function initSocketServerOld(server: NetServer) {
 
 export function setIO(socketIO: ServerIO) {
   io = socketIO
+}
+
+// Add dashboard update function with null check
+export async function emitDashboardUpdate(userId: string, type: string, data: any): Promise<void> {
+  const io = getIO()
+  if (!io) {
+    console.warn('Socket server not initialized')
+    return
+  }
+  
+  io.to(`dashboard:${userId}`).emit('dashboard_update', { type, data })
+}
+
+// Add stats helper function
+async function getDashboardStats(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      courseProgress: true,
+      userAchievements: true,
+      sentFriendships: true,
+      receivedFriendships: true,
+      courseRatings: true,
+      statistics: true,
+      studySessions: {
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      }
+    }
+  })
+
+  if (!user) return null
+
+  const totalStudyTime = user.studySessions.reduce((acc, session) => {
+    return acc + (session.duration || 0)
+  }, 0)
+
+  const completedCourses = user.courseProgress.filter(p => p.completedAt).length
+  const totalFriends = user.sentFriendships.length + user.receivedFriendships.length
+  const averageRating = user.courseRatings.length > 0
+    ? (user.courseRatings.reduce((acc, curr) => acc + curr.rating, 0) / user.courseRatings.length).toFixed(1)
+    : "0.0"
+
+  const totalProgress = user.courseProgress.length > 0
+    ? user.courseProgress.reduce((acc, curr) => acc + curr.progress, 0) / user.courseProgress.length
+    : 0
+
+  return {
+    totalStudyTime,
+    completedCourses,
+    totalFriends,
+    achievements: user.userAchievements.length,
+    currentStreak: user.statistics?.currentStreak || 0,
+    totalTimeSpent: user.statistics?.totalTimeSpent || 0,
+    averageRating,
+    totalProgress,
+    learningGoals: {
+      daily: 30,
+      progress: user.statistics?.totalTimeSpent || 0
+    },
+    certificatesEarned: completedCourses,
+    recentActivity: user.studySessions.map(session => ({
+      id: session.id,
+      type: 'study',
+      duration: session.duration,
+      createdAt: session.createdAt
+    }))
+  }
 } 

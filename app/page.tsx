@@ -1,7 +1,6 @@
 import { Metadata } from "next"
 import { AnimatedHero } from "@/components/animated-hero"
 import { StatsSection } from "@/components/stats-section"
-import { WaveInfoSection } from "@/components/wave-info-section"
 import { FeaturesGrid } from "@/components/features-grid"
 import { ArrowRight, BookOpen, Users, Trophy, Target, Lightbulb, Rocket, Info } from "lucide-react"
 import Link from "next/link"
@@ -62,8 +61,64 @@ export default function HomePage() {
       {/* Статистика */}
       <StatsSection />
 
-      {/* Курсы */}
-      <WaveInfoSection />
+      {/* Информационная секция */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="container relative px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Инновационный подход */}
+            <div className="relative p-6 rounded-2xl border bg-card">
+              <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                <Lightbulb className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-foreground">
+                Инновационный подход
+              </h3>
+              <p className="text-muted-foreground">
+                Современные методики обучения и передовые технологии в агропромышленности
+              </p>
+            </div>
+
+            {/* Экспертные знания */}
+            <div className="relative p-6 rounded-2xl border bg-card">
+              <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                <BookOpen className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-foreground">
+                Экспертные знания
+              </h3>
+              <p className="text-muted-foreground">
+                Курсы разработаны ведущими специалистами отрасли
+              </p>
+            </div>
+
+            {/* Практический опыт */}
+            <div className="relative p-6 rounded-2xl border bg-card">
+              <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                <Target className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-foreground">
+                Практический опыт
+              </h3>
+              <p className="text-muted-foreground">
+                Реальные кейсы и практические задания для закрепления навыков
+              </p>
+            </div>
+
+            {/* Карьерный рост */}
+            <div className="relative p-6 rounded-2xl border bg-card">
+              <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                <Rocket className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-foreground">
+                Карьерный рост
+              </h3>
+              <p className="text-muted-foreground">
+                Развитие профессиональных компетенций и возможности для роста
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Призыв к действию */}
       <section className="relative py-20 overflow-hidden">
@@ -98,7 +153,103 @@ export default function HomePage() {
       {/* Особенности */}
       <section className="relative py-24 overflow-hidden">
         <div className="container relative space-y-6 py-8 md:py-12 lg:py-24">
-          <FeaturesGrid features={features} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Современные курсы */}
+            <div className="relative p-6 rounded-2xl border border-orange-100/20 dark:border-orange-400/10 bg-white/50 dark:bg-background/50 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 via-white/80 to-white/30 dark:from-orange-500/[0.03] dark:via-background/80 dark:to-background/30 rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                  <BookOpen className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                  Современные курсы
+                </h3>
+                <p className="text-muted-foreground">
+                  Актуальные знания от ведущих экспертов агропромышленности
+                </p>
+              </div>
+            </div>
+
+            {/* Сообщество */}
+            <div className="relative p-6 rounded-2xl border border-orange-100/20 dark:border-orange-400/10 bg-white/50 dark:bg-background/50 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 via-white/80 to-white/30 dark:from-orange-500/[0.03] dark:via-background/80 dark:to-background/30 rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                  Сообщество
+                </h3>
+                <p className="text-muted-foreground">
+                  Общение с единомышленниками и обмен опытом
+                </p>
+              </div>
+            </div>
+
+            {/* Достижения */}
+            <div className="relative p-6 rounded-2xl border border-orange-100/20 dark:border-orange-400/10 bg-white/50 dark:bg-background/50 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 via-white/80 to-white/30 dark:from-orange-500/[0.03] dark:via-background/80 dark:to-background/30 rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                  <Trophy className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                  Достижения
+                </h3>
+                <p className="text-muted-foreground">
+                  Система наград и сертификации для отслеживания прогресса
+                </p>
+              </div>
+            </div>
+
+            {/* Практические навыки */}
+            <div className="relative p-6 rounded-2xl border border-orange-100/20 dark:border-orange-400/10 bg-white/50 dark:bg-background/50 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 via-white/80 to-white/30 dark:from-orange-500/[0.03] dark:via-background/80 dark:to-background/30 rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                  <Target className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                  Практические навыки
+                </h3>
+                <p className="text-muted-foreground">
+                  Реальные кейсы и задачи из индустрии
+                </p>
+              </div>
+            </div>
+
+            {/* Инновации */}
+            <div className="relative p-6 rounded-2xl border border-orange-100/20 dark:border-orange-400/10 bg-white/50 dark:bg-background/50 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 via-white/80 to-white/30 dark:from-orange-500/[0.03] dark:via-background/80 dark:to-background/30 rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                  <Lightbulb className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                  Инновации
+                </h3>
+                <p className="text-muted-foreground">
+                  Новейшие технологии и методики в агропромышленности
+                </p>
+              </div>
+            </div>
+
+            {/* Развитие */}
+            <div className="relative p-6 rounded-2xl border border-orange-100/20 dark:border-orange-400/10 bg-white/50 dark:bg-background/50 backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50/50 via-white/80 to-white/30 dark:from-orange-500/[0.03] dark:via-background/80 dark:to-background/30 rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-lg bg-orange-100/80 dark:bg-orange-500/10 flex items-center justify-center mb-4">
+                  <Rocket className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
+                  Развитие
+                </h3>
+                <p className="text-muted-foreground">
+                  Постоянное обновление контента и новые возможности
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
