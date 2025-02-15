@@ -13,7 +13,7 @@ interface ProfileContentProps {
   tab: TabType
 }
 
-export default function ProfileContent({ userId, tab }: ProfileContentProps) {
+export function ProfileContent({ userId, tab }: ProfileContentProps) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 

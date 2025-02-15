@@ -2,7 +2,7 @@ import { Server as NetServer } from "http"
 import { NextApiRequest } from "next"
 import { Server as ServerIO } from "socket.io"
 import { NextApiResponseServerIO } from "@/types/next"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import type { 
   ClientToServerEvents, 
   ServerToClientEvents,

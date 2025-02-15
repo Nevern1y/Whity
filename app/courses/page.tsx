@@ -4,7 +4,7 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { Suspense } from "react"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { 
@@ -69,7 +69,8 @@ interface CourseFromDB {
     image: string | null
   }
   _count: {
-    students: number
+    progress: number
+    ratings: number
   }
 }
 
@@ -96,7 +97,8 @@ async function getCourses() {
         },
         _count: {
           select: {
-            students: true
+            progress: true,
+            ratings: true
           }
         }
       }
@@ -116,8 +118,8 @@ async function getCourses() {
         name: course.author.name,
         image: course.author.image
       },
-      studentsCount: course._count.students,
-      rating: 4.5
+      studentsCount: course._count.progress,
+      rating: course._count.ratings > 0 ? 4.5 : 0 // TODO: Implement actual rating calculation
     }))
 
     return mappedCourses
@@ -174,15 +176,16 @@ export default async function CoursesPage() {
           {courses.map((course: CourseWithDetails) => (
             <CourseCard
               key={course.id}
-              id={course.id}
-              title={course.title}
-              description={course.description}
-              image={course.image}
-              level={course.level}
-              duration={course.duration}
-              studentsCount={course.studentsCount}
-              rating={course.rating}
-              authorId={course.authorId}
+              course={{
+                id: course.id,
+                title: course.title,
+                description: course.description,
+                image: course.image || undefined,
+                level: course.level,
+                duration: course.duration,
+                studentsCount: course.studentsCount,
+                rating: course.rating
+              }}
               currentUser={session?.user ? {
                 id: session.user.id,
                 role: session.user.role

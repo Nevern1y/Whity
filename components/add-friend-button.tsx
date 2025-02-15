@@ -5,32 +5,53 @@ import { Button } from "@/components/ui/button"
 import { UserPlus, UserCheck, UserMinus, Loader2, MessageSquare, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+import { useSocket } from "@/hooks/use-socket"
+import { SOCKET_EVENTS } from "@/components/providers/socket-provider"
 
 interface AddFriendButtonProps {
   targetUserId: string
-  initialStatus: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SELF'
+  initialStatus?: 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SELF'
+  isReceivedRequest?: boolean
+  className?: string
+  fullWidth?: boolean
 }
 
-export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFriendButtonProps) {
+export function AddFriendButton({
+  targetUserId,
+  initialStatus = 'NONE',
+  isReceivedRequest = false,
+  className,
+  fullWidth = false
+}: AddFriendButtonProps) {
   const [status, setStatus] = useState(initialStatus)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const socket = useSocket()
 
   useEffect(() => {
     setStatus(initialStatus)
   }, [initialStatus])
+
+  useEffect(() => {
+    if (!socket) return
+
+    socket.on(SOCKET_EVENTS.FRIEND_REQUEST_RESPONSE, (data) => {
+      if (data.friendshipId) {
+        setStatus(data.status)
+      }
+    })
+
+    return () => {
+      socket.off(SOCKET_EVENTS.FRIEND_REQUEST_RESPONSE)
+    }
+  }, [socket])
 
   const handleAddFriend = async () => {
     try {
@@ -66,14 +87,8 @@ export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFri
       
       if (response.ok) {
         setStatus('ACCEPTED')
-        window.dispatchEvent(new CustomEvent('friendship-updated', { 
-          detail: { targetUserId, status: 'ACCEPTED' } 
-        }))
         toast.success('Заявка в друзья принята')
-        
-        setTimeout(() => {
-          router.push(`/messages?userId=${targetUserId}`)
-        }, 1500)
+        router.refresh()
       }
     } catch (error) {
       toast.error('Не удалось принять заявку')
@@ -91,10 +106,8 @@ export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFri
 
       if (response.ok) {
         setStatus('NONE')
-        window.dispatchEvent(new CustomEvent('friendship-updated', { 
-          detail: { targetUserId, status: 'NONE' } 
-        }))
         toast.success('Пользователь удален из друзей')
+        router.refresh()
       }
     } catch (error) {
       toast.error('Не удалось удалить из друзей')
@@ -104,21 +117,13 @@ export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFri
   }
 
   const handleStartChat = () => {
-    router.push(`/messages?userId=${targetUserId}`)
+    router.push(`/messages/${targetUserId}`)
   }
 
-  useEffect(() => {
-    const handleFriendshipUpdate = (event: CustomEvent) => {
-      if (event.detail.targetUserId === targetUserId) {
-        setStatus(event.detail.status)
-      }
-    }
-    
-    window.addEventListener('friendship-updated', handleFriendshipUpdate as EventListener)
-    return () => {
-      window.removeEventListener('friendship-updated', handleFriendshipUpdate as EventListener)
-    }
-  }, [targetUserId])
+  const buttonClasses = cn(
+    fullWidth ? 'w-full' : 'min-w-[160px]',
+    className
+  )
 
   if (status === 'ACCEPTED') {
     return (
@@ -127,7 +132,10 @@ export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFri
           <Button
             variant="ghost"
             size="sm"
-            className="text-green-500 hover:text-green-600"
+            className={cn(
+              "text-green-500 hover:text-green-600",
+              buttonClasses
+            )}
           >
             <UserCheck className="h-4 w-4 mr-2" />
             В друзьях
@@ -151,20 +159,34 @@ export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFri
   }
 
   if (status === 'PENDING') {
-    if (initialStatus === 'PENDING' && !isLoading) {
+    if (initialStatus === 'PENDING' && isReceivedRequest && !isLoading) {
       return (
         <Button
           variant="ghost"
           size="sm"
           onClick={handleAcceptFriend}
+          disabled={isLoading}
+          className={buttonClasses}
         >
-          Принять запрос
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <>
+              <UserCheck className="h-4 w-4 mr-2" />
+              Принять запрос
+            </>
+          )}
         </Button>
       )
     }
     return (
-      <Button variant="ghost" size="sm" disabled>
-        <Loader2 className="h-4 w-4 mr-2" />
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        disabled 
+        className={buttonClasses}
+      >
+        <Clock className="h-4 w-4 mr-2" />
         Запрос отправлен
       </Button>
     )
@@ -173,17 +195,12 @@ export function AddFriendButton({ targetUserId, initialStatus = 'NONE' }: AddFri
   return (
     <Button
       variant="secondary"
-      className="flex-1"
       onClick={handleAddFriend}
       disabled={status !== 'NONE' || isLoading}
+      className={buttonClasses}
     >
       {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : initialStatus === 'PENDING' ? (
-        <>
-          <Clock className="h-4 w-4 mr-2" />
-          Запрос отправлен
-        </>
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
       ) : (
         <>
           <UserPlus className="h-4 w-4 mr-2" />

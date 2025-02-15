@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { Friendship, User } from "@prisma/client"
 
@@ -42,39 +42,31 @@ interface UserWithFriendshipStatus {
   isIncoming: boolean
 }
 
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const query = searchParams.get('q')
-    const userId = session.user.id
+    const { searchParams } = new URL(req.url)
+    const query = searchParams.get("q")
 
-    // Если нет поискового запроса, возвращаем пустой массив
     if (!query) {
       return NextResponse.json([])
     }
 
-    const lowercaseQuery = query.toLowerCase()
-
-    // Ищем пользователей с информацией о дружбе
+    // Search users by name or email
     const users = await prisma.user.findMany({
       where: {
-        NOT: { id: userId },
-        OR: [
-          { 
-            name: {
-              contains: lowercaseQuery
-            } 
+        AND: [
+          {
+            OR: [
+              { name: { contains: query } },
+              { email: { contains: query } }
+            ]
           },
-          { 
-            email: {
-              contains: lowercaseQuery
-            } 
-          }
+          { id: { not: session.user.id } } // Exclude current user
         ]
       },
       select: {
@@ -84,37 +76,52 @@ export async function GET(request: Request) {
         image: true,
         isOnline: true,
         lastActive: true,
-        // Добавляем информацию о входящих и исходящих заявках в друзья
         sentFriendships: {
-          where: { receiverId: userId },
-          select: { status: true }
+          where: {
+            OR: [
+              { receiverId: session.user.id },
+              { senderId: session.user.id }
+            ]
+          },
+          select: {
+            id: true,
+            status: true
+          }
         },
         receivedFriendships: {
-          where: { senderId: userId },
-          select: { status: true }
+          where: {
+            OR: [
+              { receiverId: session.user.id },
+              { senderId: session.user.id }
+            ]
+          },
+          select: {
+            id: true,
+            status: true
+          }
         }
       },
-      take: 10
+      take: 20,
     })
 
-    // Добавляем типизацию в map
-    const usersWithFriendshipStatus = users.map((user: UserWithFriendships): UserWithFriendshipStatus => {
+    // Transform users to include friendship status
+    const transformedUsers = users.map(user => {
       const sentFriendship = user.sentFriendships[0]
       const receivedFriendship = user.receivedFriendships[0]
-      const friendshipStatus = (sentFriendship?.status || receivedFriendship?.status || 'NONE') as 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
-      const isIncoming = !!sentFriendship
-
-      // Удаляем лишние поля
-      const { sentFriendships, receivedFriendships, ...userData } = user
+      const friendship = sentFriendship || receivedFriendship
 
       return {
-        ...userData,
-        friendshipStatus,
-        isIncoming
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        isOnline: user.isOnline,
+        lastActive: user.lastActive,
+        friendshipStatus: friendship ? friendship.status : 'NONE'
       }
     })
 
-    return NextResponse.json(usersWithFriendshipStatus)
+    return NextResponse.json(transformedUsers)
   } catch (error) {
     console.error("[USERS_SEARCH]", error)
     return new NextResponse("Internal Error", { status: 500 })

@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["clientExtensions"]
 }
 
 datasource db {
@@ -18,172 +16,26 @@ model User {
   emailVerified       DateTime?
   image               String?
   hashedPassword      String?
-  role                String            @default("USER")
+  role                UserRole          @default(USER)
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+  isOnline            Boolean           @default(false)
+  lastActive          DateTime?
   accounts            Account[]
   sessions            Session[]
-  authoredCourses     Course[]          @relation("AuthoredCourses")
-  notifications       Notification[]
-  progress            Progress[]        @relation("UserProgress")
+  courses             Course[]
+  courseProgress      CourseProgress[]
+  courseRatings       CourseRating[]
   activities          Activity[]
-  sentMessages        Message[]         @relation("SentMessages")
-  receivedMessages    Message[]         @relation("ReceivedMessages")
-  userAchievements    UserAchievement[] @relation("UserAchievements")
-  news                News[]            @relation("NewsAuthor")
-  articles            Article[]         @relation("AuthoredArticles")
+  notifications       Notification[]
+  achievements        UserAchievement[]
   sentFriendships     Friendship[]      @relation("SentFriendships")
   receivedFriendships Friendship[]      @relation("ReceivedFriendships")
-  lastActive          DateTime?
-  preferences         Json?
-  totalPoints         Int               @default(0)
-  level               Int               @default(1)
-  stats               UserStats?
-  totalExperience     Int               @default(0)
-  completedLessons    Int               @default(0)
-  lastLoginAt         DateTime?
-  isOnline            Boolean           @default(false)
-  courseProgress      CourseProgress[]
-  lessonComments      LessonComment[]   @relation("UserComments")
-  courseRatings       CourseRating[]    @relation("CourseRatings")
-  enrolledCourses     Course[]          @relation("EnrolledCourses")
-  twoFactorEnabled    Boolean           @default(false) @map("two_factor_enabled")
-  sessionTimeout      Int               @default(30) @map("session_timeout")
-  securityLogs        SecurityLog[]
-  securitySettings    Json?             @default("{}")
-  studySessions       StudySession[]
-  statistics          UserStatistics?
-  settings            UserSettings?
-  studentsCount       Int               @default(0)
-  rating              Float             @default(0)
-  uploadedFiles       UploadedFile[]
-  uploads             Upload[]          @relation("UserUploads")
-  bio                 String?
+  articles            Article[]
 
   @@index([email])
   @@index([role])
-  @@index([isOnline])
   @@map("users")
-}
-
-model Article {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.Text
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation("AuthoredArticles", fields: [authorId], references: [id])
-
-  @@index([authorId])
-  @@map("articles")
-}
-
-model Course {
-  id             String           @id @default(cuid())
-  title          String
-  description    String           @db.Text
-  image          String?
-  level          Level            @default(BEGINNER)
-  duration       String
-  published      Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  authorId       String
-  author         User             @relation("AuthoredCourses", fields: [authorId], references: [id])
-  progress       Progress[]       @relation("CourseProgress")
-  lessons        Lesson[]
-  courseProgress CourseProgress[]
-  courseRatings  CourseRating[]   @relation("CourseRatings")
-  students       User[]           @relation("EnrolledCourses")
-  studySessions  StudySession[]
-  studentsCount  Int              @default(0)
-  rating         Float            @default(0)
-
-  @@index([authorId])
-  @@index([published])
-  @@index([level])
-  @@map("courses")
-}
-
-model Activity {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String
-  description String   @db.Text
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("activities")
-}
-
-model Progress {
-  id             String   @id @default(cuid())
-  userId         String
-  courseId       String
-  lessonId       String?
-  completed      Boolean  @default(false)
-  progress       Float    @default(0)
-  lastAccessed   DateTime @default(now())
-  totalTimeSpent Int      @default(0)
-  user           User     @relation("UserProgress", fields: [userId], references: [id], onDelete: Cascade)
-  course         Course   @relation("CourseProgress", fields: [courseId], references: [id], onDelete: Cascade)
-  lesson         Lesson?  @relation("LessonProgress", fields: [lessonId], references: [id], onDelete: SetNull)
-
-  @@unique([userId, courseId, lessonId])
-  @@index([userId])
-  @@index([courseId])
-  @@index([lessonId])
-  @@map("progress")
-}
-
-model News {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.Text
-  image     String?
-  authorId  String
-  published Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation("NewsAuthor", fields: [authorId], references: [id])
-
-  @@index([authorId])
-  @@map("news")
-}
-
-model Lesson {
-  id        String          @id @default(cuid())
-  title     String
-  content   String          @db.Text
-  courseId  String
-  createdAt DateTime        @default(now())
-  position  Int             @default(0)
-  course    Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progress  Progress[]      @relation("LessonProgress")
-  comments  LessonComment[] @relation("LessonComments")
-
-  @@index([courseId])
-  @@map("lessons")
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  title     String
-  message   String
-  link      String?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  metadata  Json?
-
-  @@index([userId])
-  @@map("notifications")
 }
 
 model Account {
@@ -211,149 +63,40 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  location     String?
+  userAgent    String?  @db.Text
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
 }
 
-model KnowledgeArticle {
-  id        String   @id @default(cuid())
-  title     String
-  content   String // Убрали @db.Text для SQLite
-  category  String
-  type      String   @default("article")
-  readTime  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Course {
+  id          String           @id @default(cuid())
+  title       String
+  description String           @db.Text
+  image       String?
+  published   Boolean          @default(false)
+  level       Level            @default(BEGINNER)
+  duration    String           @default("0")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  authorId    String
+  author      User             @relation(fields: [authorId], references: [id])
+  progress    CourseProgress[]
+  ratings     CourseRating[]
 
-  @@index([category])
-  @@index([type])
-  @@map("knowledge_articles")
-}
-
-model Friendship {
-  id         String   @id @default(cuid())
-  senderId   String
-  receiverId String
-  status     FriendshipStatus @default(NONE)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  sender     User     @relation("SentFriendships", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedFriendships", fields: [receiverId], references: [id])
-
-  @@index([senderId])
-  @@index([receiverId])
-}
-
-model Message {
-  id         String   @id @default(cuid())
-  content    String   @db.Text
-  senderId   String
-  receiverId String
-  createdAt  DateTime @default(now())
-  read       Boolean  @default(false)
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
-
-  @@index([senderId])
-  @@index([receiverId])
-  @@map("messages")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-model Achievement {
-  id               String            @id @default(cuid())
-  title            String
-  description      String
-  icon             String?
-  type             String
-  condition        Json?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  userAchievements UserAchievement[] @relation("AchievementUsers")
-  requirement      Int
-  xpReward         Int               @default(100)
-
-  @@index([type])
-  @@map("achievements")
-}
-
-model UserAchievement {
-  id            String      @id @default(cuid())
-  userId        String
-  achievementId String
-  progress      Float       @default(0)
-  earnedAt      DateTime?
-  completed     Boolean     @default(false)
-  user          User        @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade, map: "user_achievement_user_fkey")
-  achievement   Achievement @relation("AchievementUsers", fields: [achievementId], references: [id], onDelete: Cascade, map: "user_achievement_achievement_fkey")
-
-  @@unique([userId, achievementId])
-  @@index([userId])
-  @@index([achievementId])
-  @@map("user_achievements")
-}
-
-model UserStats {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  coursesCompleted  Int      @default(0)
-  achievementsCount Int      @default(0)
-  totalTimeSpent    Int      @default(0)
-  lastCalculated    DateTime @default(now())
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("user_stats")
-}
-
-enum UserRole {
-  ADMIN
-  USER
-}
-
-enum Level {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-}
-
-enum NotificationType {
-  COURSE
-  ACHIEVEMENT
-  MESSAGE
-  NEWS
-  SYSTEM
-}
-
-enum Role {
-  USER
-  ADMIN
-}
-
-enum FriendshipStatus {
-  NONE
-  PENDING
-  ACCEPTED
-  REJECTED
+  @@index([authorId])
+  @@map("courses")
 }
 
 model CourseProgress {
   id             String    @id @default(cuid())
   userId         String
   courseId       String
-  progress       Float     @default(0)
+  progress       Int       @default(0)
   completedAt    DateTime?
   lastAccessedAt DateTime  @default(now())
-  totalTimeSpent Int       @default(0)
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   course         Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
@@ -363,130 +106,117 @@ model CourseProgress {
   @@map("course_progress")
 }
 
-model LessonComment {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lessonId  String
-  userId    String
-  lesson    Lesson   @relation("LessonComments", fields: [lessonId], references: [id], onDelete: Cascade)
-  user      User     @relation("UserComments", fields: [userId], references: [id], onDelete: Cascade, map: "lesson_comment_user_fkey")
-
-  @@index([lessonId])
-  @@index([userId])
-  @@map("lesson_comments")
-}
-
 model CourseRating {
   id        String   @id @default(cuid())
+  userId    String
+  courseId  String
   rating    Int
   comment   String?  @db.Text
-  courseId  String
-  userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  course Course @relation("CourseRatings", fields: [courseId], references: [id], onDelete: Cascade)
-  user   User   @relation("CourseRatings", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([courseId, userId])
+  @@unique([userId, courseId])
   @@index([userId])
   @@index([courseId])
   @@map("course_ratings")
 }
 
-model SecurityLog {
-  id        String   @id @default(cuid())
-  userId    String
-  event     String
-  ip        String
-  location  String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@map("security_logs")
-}
-
-model UserStatistics {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalTimeSpent  Int      @default(0)
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
-  lastStudyDate   DateTime @default(now())
-  dailyGoal       Int      @default(30) // Minutes per day
-  weeklyGoal      Int      @default(150) // Minutes per week
-  monthlyGoal     Int      @default(600) // Minutes per month
-  totalXP         Int      @default(0)
-  level           Int      @default(1)
-  lastRewardDate  DateTime @default(now())
-  studyHistory    Json?    // Daily study minutes for the last 30 days
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([userId])
-}
-
-model StudySession {
+model Activity {
   id          String   @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId    String?
-  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  duration    Int      // Minutes
-  completed   Boolean  @default(false)
-  startedAt   DateTime @default(now())
-  completedAt DateTime?
+  type        String
+  description String
+  metadata    Json?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([courseId])
+  @@index([type])
+  @@map("activities")
 }
 
-model UserSettings {
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  type      String
+  link      String?
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("notifications")
+}
+
+model UserAchievement {
   id            String   @id @default(cuid())
-  userId        String   @unique
-  phone         String?
-  company       String?
-  language      String   @default("ru")
-  timezone      String   @default("Europe/Moscow")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  notifications Json?
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, achievementId])
   @@index([userId])
+  @@map("user_achievements")
 }
 
-model UploadedFile {
-  id        String   @id @default(cuid())
-  fileName  String // Имя файла на диске
-  fileUrl   String // Публичный URL файла
-  fileType  String // MIME тип файла
-  fileSize  Int // Размер файла в байтах
-  userId    String // ID пользователя, загрузившего файл
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Friendship {
+  id         String           @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  sender     User             @relation("SentFriendships", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User             @relation("ReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("friendships")
 }
 
-model Upload {
-  id        String   @id @default(cuid())
-  fileName  String
-  fileType  String
-  filePath  String
-  fileSize  Int
-  userId    String
-  user      User     @relation("UserUploads", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Article {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  description String?  @db.Text
+  slug        String   @unique
+  image       String?
+  published   Boolean  @default(false)
+  views       Int      @default(0)
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  author      User     @relation(fields: [authorId], references: [id])
 
-  @@index([userId])
-  @@map("uploads")
+  @@index([authorId])
+  @@map("articles")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+  INSTRUCTOR
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
 }

@@ -1,122 +1,120 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
+import dynamic from "next/dynamic"
+import { AnimatePresence } from "framer-motion"
 import { useEffect, useState } from "react"
 import { useSocket } from "@/hooks/use-socket"
 import { Card } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
-
-// Компонент конфетти без использования canvas-confetti
-function Confetti() {
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      {[...Array(50)].map((_, i) => (
-        <motion.div
-          key={i}
-          className={cn(
-            "absolute w-2 h-2 rounded-full",
-            "bg-primary"
-          )}
-          initial={{
-            opacity: 1,
-            top: "100%",
-            left: `${Math.random() * 100}%`,
-          }}
-          animate={{
-            opacity: 0,
-            top: `${Math.random() * 50}%`,
-            left: `${Math.random() * 100}%`,
-            rotate: Math.random() * 360,
-          }}
-          transition={{
-            duration: 1 + Math.random(),
-            ease: "easeOut",
-            delay: Math.random() * 0.2,
-          }}
-          style={{
-            backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
-          }}
-        />
-      ))}
-    </div>
-  )
-}
+import { Trophy } from "lucide-react"
+import { useAnimation } from "@/components/providers/animation-provider"
 
 interface Achievement {
   id: string
   title: string
   description: string
-  icon: string
+  image?: string
+  xpReward: number
+}
+
+const popupVariants = {
+  hidden: { 
+    opacity: 0, 
+    scale: 0.8,
+    y: 50 
+  },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 25
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.8,
+    y: 50,
+    transition: {
+      duration: 0.2
+    }
+  }
+}
+
+const iconVariants = {
+  hidden: { scale: 0 },
+  visible: { 
+    scale: 1,
+    transition: {
+      delay: 0.2,
+      type: "spring",
+      stiffness: 300,
+      damping: 20
+    }
+  }
 }
 
 export function AchievementPopup() {
   const [achievement, setAchievement] = useState<Achievement | null>(null)
-  const [showConfetti, setShowConfetti] = useState(false)
   const socket = useSocket()
+  const { m } = useAnimation()
 
   useEffect(() => {
     if (!socket) return
 
-    socket.on("achievement-earned", (data: Achievement) => {
+    const handleAchievement = (data: Achievement) => {
       setAchievement(data)
-      setShowConfetti(true)
+      // Автоматически скрываем через 5 секунд
       setTimeout(() => {
-        setShowConfetti(false)
-        setTimeout(() => setAchievement(null), 500)
-      }, 2000)
-    })
+        setAchievement(null)
+      }, 5000)
+    }
+
+    socket.on("achievement_unlocked", handleAchievement)
 
     return () => {
-      socket.off("achievement-earned")
+      socket.off("achievement_unlocked", handleAchievement)
     }
   }, [socket])
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {achievement && (
-        <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.3 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -50, scale: 0.5 }}
+        <m.div
           className="fixed bottom-4 right-4 z-50"
+          variants={popupVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
         >
-          {showConfetti && <Confetti />}
-          <Card className={cn(
-            "bg-gradient-to-br from-primary to-primary-foreground",
-            "text-primary-foreground p-6 shadow-xl",
-            "border-2 border-primary-foreground/10"
-          )}>
-            <div className="flex items-center gap-4">
-              <motion.div 
-                className="text-4xl"
-                animate={{ 
-                  scale: [1, 1.2, 1],
-                  rotate: [0, -10, 10, -10, 0] 
-                }}
-                transition={{ 
-                  duration: 0.5,
-                  times: [0, 0.2, 0.4, 0.6, 0.8],
-                  repeat: Infinity,
-                  repeatDelay: 1
-                }}
+          <Card className="p-4 w-[300px] bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20">
+            <div className="flex items-start gap-4">
+              <m.div
+                variants={iconVariants}
+                className="flex-shrink-0 p-2 rounded-full bg-yellow-500/20"
               >
-                {achievement.icon}
-              </motion.div>
-              <div className="space-y-2">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="space-y-1"
-                >
-                  <h4 className="font-bold text-xl">Новое достижение!</h4>
-                  <p className="text-primary-foreground/90">{achievement.title}</p>
-                  <p className="text-sm text-primary-foreground/70">{achievement.description}</p>
-                </motion.div>
+                <Trophy className="h-6 w-6 text-yellow-500" />
+              </m.div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-yellow-500">
+                  {achievement.title}
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  {achievement.description}
+                </p>
+                <p className="text-xs text-yellow-500/80 mt-1">
+                  +{achievement.xpReward} XP
+                </p>
               </div>
             </div>
           </Card>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   )
-} 
+}
+
+export const AchievementPopupDynamic = dynamic(() => Promise.resolve(AchievementPopup), {
+  ssr: false
+}) 

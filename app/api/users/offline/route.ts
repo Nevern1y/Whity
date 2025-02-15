@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { checkAuth } from "@/lib/auth"
+import { checkAuth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { emitSocketEvent } from "@/lib/socket-server"
 

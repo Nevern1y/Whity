@@ -5,9 +5,11 @@ import { useSession } from "next-auth/react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Edit, Trash } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { staggerContainer, listItem, transitions } from "@/lib/framer-animations"
+import { useAnimation } from "@/components/providers/animation-provider"
 
 interface Article {
   id: string
@@ -19,6 +21,9 @@ interface Article {
     image: string | null
   }
   createdAt: string
+  updatedAt: string
+  authorId: string
+  published: boolean
 }
 
 export function ArticlesList() {
@@ -27,6 +32,7 @@ export function ArticlesList() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
+  const { m } = useAnimation()
 
   useEffect(() => {
     fetchArticles()
@@ -83,14 +89,21 @@ export function ArticlesList() {
   }
 
   return (
-    <AnimatePresence>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <m.div 
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      variants={staggerContainer}
+      transition={transitions.default}
+      initial="initial"
+      animate="animate"
+    >
+      <AnimatePresence mode="popLayout">
         {articles.map((article) => (
-          <motion.div
+          <m.div
             key={article.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            variants={listItem}
+            transition={transitions.default}
+            layout
+            layoutId={article.id}
             className="h-full"
           >
             <Card className="overflow-hidden h-full flex flex-col">
@@ -143,9 +156,9 @@ export function ArticlesList() {
                 )}
               </div>
             </Card>
-          </motion.div>
+          </m.div>
         ))}
-      </div>
-    </AnimatePresence>
+      </AnimatePresence>
+    </m.div>
   )
 } 

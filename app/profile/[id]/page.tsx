@@ -8,28 +8,26 @@ import { AddFriendButton } from "@/components/add-friend-button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import CourseProgressWrapper from "./_components/course-progress-wrapper"
-import ActivityFeedWrapper from "./_components/activity-feed-wrapper"
-import UserAchievementsWrapper from "./_components/user-achievements-wrapper"
-import { BookOpen, Trophy, Star, Users2, Calendar } from "lucide-react"
+import { BookOpen, Trophy, Star, Users2, Calendar, Settings, Shield, Trash2 } from "lucide-react"
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { Suspense, useEffect, useState } from "react"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import type { User, Activity, Achievement } from "@/types/prisma"
-import ProfileContent from './_components/profile-content'
+import { ProfileContent } from './_components/profile-content'
 import { Badge } from "@/components/ui/badge"
-import { ProfilePageContent } from "@/components/profile/profile-page-content"
 import { FriendActionButton } from "@/components/friend-action-button"
 import { FriendshipValidator } from "@/lib/friendship-validator"
+import type { FriendshipStatus } from "@/types/friends"
 import { ExtendedFriendshipStatus } from "@/lib/constants"
-import { 
-  FriendshipStatusBadge,
-  ProfilePageContent as NewProfilePageContent 
-} from "@/components"
 import { useSession } from "next-auth/react"
-import { DashboardButton } from "@/components/profile/dashboard-button"
+import { DashboardButton } from "@/components/dashboard/dashboard-button"
 import { useRouter } from "next/navigation"
+import { useAnimation } from "@/components/providers/animation-provider"
+import { FriendsList } from "./_components/friends-list"
+import { cn } from "@/lib/utils"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 interface ProfilePageProps {
   params: {
@@ -37,81 +35,89 @@ interface ProfilePageProps {
   }
 }
 
-interface ProfileData {
+interface Progress {
   id: string
-  name: string | null
-  email: string | null
-  image: string | null
-  createdAt: Date
-  friendshipStatus: string
-  isOwnProfile: boolean
-  courseProgress: Array<{
-    completedAt: Date | null
-    progress: number
-  }>
-  userAchievements: Array<{
-    id: string
-    achievement: any
-  }>
-  courseRatings: Array<{
-    rating: number
-  }>
-  sentFriendships: Array<{
-    id: string
-    status: string
-    receiver: {
-      id: string
-      name: string | null
-      email: string | null
-      image: string | null
-    }
-  }>
-  receivedFriendships: Array<{
-    id: string
-    status: string
-    sender: {
-      id: string
-      name: string | null
-      email: string | null
-      image: string | null
-    }
-  }>
+  userId: string
+  courseId: string
+  progress: number
+  totalTimeSpent: number
+  completedAt: Date | null
+  lastAccessedAt: Date
+}
+
+interface CourseRating {
+  id: string
+  courseId: string
+  userId: string
+  rating: number
+}
+
+function StatCard({ icon: Icon, title, value }: { icon: any; title: string; value: number }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 text-center">
+      <Icon className="w-6 h-6 text-primary mb-2" />
+      <p className="text-sm text-muted-foreground">{title}</p>
+      <p className="text-xl font-bold">{value}</p>
+    </div>
+  )
+}
+
+function AdminActions({ userId, userRole }: { userId: string, userRole: string }) {
+  const router = useRouter()
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => router.push(`/admin/users?userId=${userId}`)}
+      >
+        <Shield className="h-4 w-4 mr-2" />
+        Управление пользователем
+      </Button>
+      {userRole !== 'ADMIN' && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => router.push(`/admin/users?action=delete&userId=${userId}`)}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Удалить пользователя
+        </Button>
+      )}
+    </div>
+  )
 }
 
 export default function ProfilePage({ params }: ProfilePageProps) {
   const { data: session } = useSession()
-  const router = useRouter()
-  const [profileData, setProfileData] = useState<ProfileData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [imageError, setImageError] = useState(false)
-  const [isImageLoaded, setIsImageLoaded] = useState(false)
+  const [profileData, setProfileData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const isOwnProfile = session?.user?.id === params.id
 
   useEffect(() => {
-    async function loadProfileData() {
+    async function loadProfile() {
       try {
-        setIsLoading(true)
         const response = await fetch(`/api/users/${params.id}`)
-        
         if (!response.ok) {
           if (response.status === 404) {
             setError("Пользователь не найден")
-            return
+          } else {
+            setError("Ошибка загрузки профиля")
           }
-          throw new Error("Failed to load profile")
+          return
         }
-        
         const data = await response.json()
         setProfileData(data)
-      } catch (error) {
-        console.error("Error loading profile:", error)
-        setError("Ошибка загрузки профиля")
+      } catch (err) {
+        setError("Произошла ошибка при загрузке профиля")
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadProfileData()
+    loadProfile()
   }, [params.id])
 
   if (isLoading) {
@@ -134,128 +140,137 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   if (error || !profileData) {
     return (
       <div className="container py-8">
-        <Card className="p-6 text-center">
-          <p className="text-muted-foreground">{error || "Профиль не найден"}</p>
+        <Card className="p-6">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-destructive">{error || "Ошибка"}</h2>
+            <p className="text-muted-foreground mt-2">Попробуйте обновить страницу</p>
+          </div>
         </Card>
       </div>
     )
   }
 
+  const completedCourses = profileData.courseProgress?.filter(
+    (p: Progress) => p.progress === 100 || p.completedAt !== null
+  ).length || 0
+
+  const totalFriends = [
+    ...(profileData.sentFriendships || []), 
+    ...(profileData.receivedFriendships || [])
+  ].filter(f => f.status === 'ACCEPTED').length
+
+  const averageRating = profileData.courseRatings?.length 
+    ? profileData.courseRatings.reduce(
+        (acc: number, curr: CourseRating) => acc + curr.rating, 
+        0
+      ) / profileData.courseRatings.length 
+    : 0
+
+  const achievements = profileData.userAchievements?.length || 0
+
   return (
     <div className="container py-8 space-y-8">
-      {/* Profile Header */}
-      <div className="relative">
-        {/* Background Card with Gradient */}
-        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-orange-500/10 via-orange-500/5 to-transparent">
-          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px]" />
-        </div>
-
-        {/* Main Profile Card */}
-        <Card className="relative mt-24">
-          {/* Avatar Overlay */}
-          <div className="absolute left-1/2 -translate-x-1/2 -top-16">
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-b from-white/50 to-white/10 dark:from-white/10 dark:to-white/5 rounded-full blur-sm" />
-              <Avatar className="relative w-32 h-32 border-4 border-background shadow-xl rounded-full overflow-hidden">
-                {profileData.image && !imageError ? (
-                  <AvatarImage
-                    src={profileData.image}
-                    className="object-cover"
-                    onLoad={() => setIsImageLoaded(true)}
-                    onError={() => setImageError(true)}
+      <Card className="relative overflow-hidden">
+        <div className="h-48 bg-gradient-to-br from-primary/80 to-primary/40" />
+        <CardContent className="relative">
+          <div className="absolute top-4 right-4">
+            {!isOwnProfile && session?.user && (
+              <div className="flex items-center gap-2">
+                <FriendActionButton 
+                  targetUserId={params.id} 
+                  initialStatus={profileData.friendshipStatus}
+                  isReceivedRequest={profileData.isReceivedRequest}
+                />
+                {["ADMIN", "MANAGER"].includes(session.user.role) && (
+                  <AdminActions 
+                    userId={params.id} 
+                    userRole={profileData.role} 
                   />
-                ) : (
-                  <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900 dark:to-orange-800">
-                    {profileData.name?.[0] || '?'}
-                  </AvatarFallback>
                 )}
-              </Avatar>
-            </div>
+              </div>
+            )}
+            {isOwnProfile && (
+              <DashboardButton id={params.id} currentUserId={session?.user?.id} />
+            )}
           </div>
-
-          {/* Content Container */}
-          <div className="pt-20 pb-6 px-6">
-            {/* User Info */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold bg-gradient-to-br from-orange-600 to-orange-500 dark:from-orange-400 dark:to-orange-300 bg-clip-text text-transparent">
-                {profileData.name}
-              </h1>
-              <p className="text-muted-foreground mt-1">{profileData.email}</p>
-              <p className="text-sm text-muted-foreground bg-orange-50 dark:bg-orange-500/5 px-3 py-1 rounded-full inline-block mt-2">
+          <div className="flex flex-col items-center -mt-20 text-center">
+            <div className="relative">
+              <Avatar className="w-32 h-32 border-4 border-background shadow-xl">
+                <AvatarImage 
+                  src={profileData.image || ''} 
+                  alt={profileData.name || ''} 
+                  className="h-full w-full object-cover"
+                />
+                <AvatarFallback>
+                  {profileData.name?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
+              {isOwnProfile && (
+                <Link
+                  href="/settings"
+                  className={cn(
+                    "absolute bottom-0 right-0 p-2 rounded-full",
+                    "bg-background border shadow-sm",
+                    "text-muted-foreground hover:text-primary",
+                    "transition-colors duration-200"
+                  )}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="sr-only">Изменить фото профиля</span>
+                </Link>
+              )}
+            </div>
+            <div className="mt-4 space-y-2">
+              <h1 className="text-2xl font-bold">{profileData.name}</h1>
+              <p className="text-muted-foreground">{profileData.email}</p>
+              <p className="text-sm text-muted-foreground">
                 На сайте с {formatDistanceToNow(new Date(profileData.createdAt), { 
-                  addSuffix: true, 
-                  locale: ru 
+                  addSuffix: true, locale: ru 
                 })}
               </p>
             </div>
 
-            {/* Action Buttons */}
-            <div className="max-w-sm mx-auto space-y-3">
-              {profileData.isOwnProfile && (
-                <DashboardButton 
-                  userId={params.id} 
-                  currentUserId={session?.user?.id} 
-                />
-              )}
-              
-              {!profileData.isOwnProfile && session?.user && (
-                <FriendActionButton 
-                  userId={params.id}
-                  initialStatus={profileData.friendshipStatus}
-                />
-              )}
+            <div className="grid grid-cols-4 gap-8 mt-8">
+              <StatCard icon={BookOpen} title="Курсов пройдено" value={completedCourses} />
+              <StatCard icon={Trophy} title="Достижений" value={achievements} />
+              <StatCard icon={Star} title="Средний рейтинг" value={Number(averageRating.toFixed(1))} />
+              <StatCard icon={Users2} title="Друзей" value={totalFriends} />
             </div>
           </div>
-        </Card>
-      </div>
-      
-      {/* Profile Content */}
-      <ProfilePageContent 
-        userId={params.id} 
-        session={session}
-        initialData={profileData}
-      />
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="progress" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="progress">Прогресс обучения</TabsTrigger>
+          <TabsTrigger value="achievements">Достижения</TabsTrigger>
+          <TabsTrigger value="activity">Активность</TabsTrigger>
+          {isOwnProfile && <TabsTrigger value="friends">Друзья</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="progress" className="space-y-6">
+          <ProfileContent userId={params.id} tab="progress" />
+        </TabsContent>
+
+        <TabsContent value="achievements">
+          <ProfileContent userId={params.id} tab="achievements" />
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <ProfileContent userId={params.id} tab="activity" />
+        </TabsContent>
+
+        {isOwnProfile && (
+          <TabsContent value="friends">
+            <FriendsList 
+              allFriendships={[
+                ...(profileData.sentFriendships || []),
+                ...(profileData.receivedFriendships || [])
+              ]}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   )
-}
-
-function StatCard({ icon: Icon, title, value }: { icon: any; title: string; value: number }) {
-  return (
-    <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted/50 text-center">
-      <Icon className="w-6 h-6 text-primary mb-2" />
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <p className="text-xl font-bold">{value}</p>
-    </div>
-  )
-}
-
-function FriendsList({ sentFriendships, receivedFriendships }: any) {
-  const friends = [...sentFriendships, ...receivedFriendships]
-    .filter(f => f.status === 'ACCEPTED')
-    .map(f => f.sender || f.receiver)
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {friends.map(friend => (
-        <Card key={friend.id}>
-          <CardContent className="flex items-center gap-4 p-4">
-            <Avatar>
-              <AvatarImage src={friend.image || ''} />
-              <AvatarFallback>{friend.name?.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-medium">{friend.name}</p>
-              <p className="text-sm text-muted-foreground">{friend.email}</p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
-interface Friendship {
-  senderId: string
-  receiverId: string
-  status: string
 } 

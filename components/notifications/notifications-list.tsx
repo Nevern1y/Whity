@@ -1,83 +1,91 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
+import { useEffect } from "react"
+import Link from "next/link"
+import { formatDistanceToNow } from "date-fns"
+import { ru } from "date-fns/locale"
+import { Bell, Check } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useSocket } from "@/hooks/use-socket"
 import { useNotifications } from "./notifications-context"
-import { NotificationItem } from "./notification-item"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { LoadingSpinner } from "@/components/loading-spinner"
-import { Bell } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
-import { Notification } from "@/types"
 
 export function NotificationsList() {
-  const { notifications, markAsRead, loading } = useNotifications()
-  const [notificationsState, setNotificationsState] = useState<Notification[]>([])
+  const socket = useSocket()
+  const { notifications, loading: isLoading, markAsRead } = useNotifications()
 
   useEffect(() => {
-    // Загружаем уведомления при монтировании
-    fetchNotifications()
-  }, [])
+    if (!socket) return
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch('/api/notifications')
-      if (!response.ok) throw new Error('Failed to fetch notifications')
-      const data = await response.json()
-      setNotificationsState(data)
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
+    socket.on("notification:new", () => {
+      // Notifications will be updated through context
+    })
+
+    socket.on("notification:update", () => {
+      // Notifications will be updated through context
+    })
+
+    return () => {
+      socket.off("notification:new")
+      socket.off("notification:update")
     }
-  }
+  }, [socket])
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <LoadingSpinner />
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-4">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+        ))}
       </div>
     )
   }
 
-  if (notifications.length === 0) {
+  if (!notifications?.length) {
     return (
-      <div className={cn(
-        "flex flex-col items-center justify-center",
-        "h-[60vh] md:h-[40vh]",
-        "p-4 text-center"
-      )}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-4"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mx-auto">
-            <Bell className="h-6 w-6 text-primary" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="font-semibold text-foreground">
-              Нет новых уведомлений
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Здесь будут появляться ваши уведомления
-            </p>
-          </div>
-        </motion.div>
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <Bell className="h-8 w-8 text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">
+          У вас пока нет уведомлений
+        </p>
       </div>
     )
   }
 
   return (
-    <ScrollArea className="h-[300px]">
-      <div className="space-y-4 p-4">
-        {notificationsState.map((notification: Notification) => (
-          <NotificationItem 
-            key={notification.id} 
-            notification={notification}
-            onAction={fetchNotifications}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="space-y-4">
+      {notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className="flex items-start gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+          onClick={() => !notification.read && markAsRead(notification.id)}
+        >
+          <Bell className="h-8 w-8 text-muted-foreground" />
+          <div className="space-y-1 flex-1">
+            <p className={cn("text-sm font-medium", !notification.read && "text-primary")}>
+              {notification.title}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(notification.createdAt), {
+                addSuffix: true,
+                locale: ru
+              })}
+            </p>
+          </div>
+          {notification.read && (
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Check className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
   )
 } 

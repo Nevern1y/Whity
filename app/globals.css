@@ -10,40 +10,40 @@
     --component-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     
     /* Обновленные переменные для светлой темы */
-    --background: 0 0% 98%;
-    --foreground: 240 10% 3.9%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
     
-    --card: var(--component-bg);
-    --card-foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
     
-    --popover: var(--component-bg);
-    --popover-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
     
-    --primary: 24 96% 45%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
     
-    --secondary: var(--component-bg);
-    --secondary-foreground: 240 6% 10%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
     
-    --muted: 30 25% 96%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
     
-    --accent: var(--component-bg);
-    --accent-foreground: 240 6% 10%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: var(--component-border);
-    --input: var(--component-border);
-    --ring: 24 96% 45%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
 
     /* Новые переменные для улучшенного визуального комфорта */
     --surface-light: 30 25% 96%;  /* Поверхность элементов */
     --surface-medium: 30 25% 94%; /* Средний уровень поверхности */
     --surface-dark: 30 25% 92%;   /* Тёмный уровень поверхности */
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     /* Улучшенные эффекты */
     --card-glow: 0 0 0 1px rgba(0, 0, 0, 0.02),
@@ -108,33 +108,33 @@
 
   .dark {
     /* Обновленная темная тема с серыми оттенками */
-    --background: 224 10% 10%;    /* Темно-серый фон */
-    --foreground: 0 0% 98%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
     
-    --card: 224 10% 12%;         /* Чуть светлее фона */
-    --card-foreground: 0 0% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
     
-    --popover: 224 10% 12%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 24 95% 50%;      /* Оранжевый для акцентов */
-    --primary-foreground: 0 0% 100%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
     
-    --secondary: 224 10% 15%;    /* Серый для вторичных элементов */
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
     
-    --muted: 224 10% 15%;
-    --muted-foreground: 224 10% 70%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
     
-    --accent: 24 95% 20%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
     
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 40% 98%;
     
-    --border: 224 10% 16%;
-    --input: 224 10% 16%;
-    --ring: 24 95% 50%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
 
     /* Улучшенные эффекты для темной темы */
     --shadow-strength: 45%;
@@ -1442,4 +1442,60 @@ body {
 .feature-card:nth-child(2) { animation-delay: 0.2s; }
 .feature-card:nth-child(3) { animation-delay: 0.3s; }
 .feature-card:nth-child(4) { animation-delay: 0.4s; }
+
+html {
+  color-scheme: light;
+  @apply antialiased;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply min-h-screen bg-background text-foreground;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Prevent theme flash */
+:root {
+  color-scheme: light;
+  --initial-color-mode: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --initial-color-mode: dark;
+}
+
+/* Smooth theme transitions */
+:root {
+  --transition-duration: 200ms;
+}
+
+body {
+  transition: background-color var(--transition-duration) ease-in-out,
+              color var(--transition-duration) ease-in-out;
+}
+
+* {
+  transition: border-color var(--transition-duration) ease-in-out,
+              background-color var(--transition-duration) ease-in-out,
+              color var(--transition-duration) ease-in-out,
+              box-shadow var(--transition-duration) ease-in-out;
+}
+
+/* Disable transitions on page load */
+.no-transitions * {
+  transition: none !important;
+}
+
+/* Prevent layout shift during animations */
+.layout-container {
+  @apply relative min-h-screen;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform;
+}
 

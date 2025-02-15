@@ -1,75 +1,77 @@
 "use client"
 
-import { useState } from "react"
-import { Search, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { motion, AnimatePresence } from "framer-motion"
-import Image from "next/image"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { Menu, Bell } from "lucide-react"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { MobileSidebar } from "./mobile-sidebar"
+import { useState } from "react"
+import { MobileNotifications } from "./mobile-notifications"
+import { useAnimation } from "@/components/providers/animation-provider"
+import { AnimatePresence } from "framer-motion"
 
 export function MobileHeader() {
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const pathname = usePathname()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const { m } = useAnimation()
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-lg md:hidden safe-top">
-      <div className="container flex h-14 items-center justify-between px-4">
-        <Link href="/" className="flex items-center space-x-2">
-          <Image
-            src="/logo.png" // Убедитесь, что у вас есть логотип
-            alt="Аллель Агро"
-            width={32}
-            height={32}
-            className="rounded-lg"
-          />
-          {!isSearchOpen && (
-            <motion.span 
-              className="font-semibold"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+    <m.header
+      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    >
+      <div className="container flex h-14 items-center">
+        <div className="flex flex-1 items-center justify-between">
+          <Link href="/" className="flex items-center space-x-2">
+            <m.span
+              className="font-bold"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              АЛЛЕЛЬ АГРО
-            </motion.span>
-          )}
-        </Link>
+              АЛЕЛЬ АГРО
+            </m.span>
+          </Link>
 
-        <AnimatePresence mode="wait">
-          {isSearchOpen ? (
-            <motion.div 
-              key="search"
-              initial={{ opacity: 0, width: "0%" }}
-              animate={{ opacity: 1, width: "100%" }}
-              exit={{ opacity: 0, width: "0%" }}
-              className="absolute inset-x-0 top-0 h-full bg-background/95 backdrop-blur-lg px-4"
-            >
-              <div className="flex h-full items-center gap-2">
-                <Input
-                  type="search"
-                  placeholder="Поиск..."
-                  className="h-9 flex-1"
-                  autoFocus
-                />
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setIsSearchOpen(false)}
+          <div className="flex items-center gap-2">
+            <Sheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+              <SheetTrigger asChild>
+                <m.button
+                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </motion.div>
-          ) : (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setIsSearchOpen(true)}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          )}
-        </AnimatePresence>
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                    3
+                  </span>
+                </m.button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-md p-0">
+                <MobileNotifications onClose={() => setIsNotificationsOpen(false)} />
+              </SheetContent>
+            </Sheet>
+
+            <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+              <SheetTrigger asChild>
+                <m.button
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Menu className="h-5 w-5" />
+                </m.button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-md p-0">
+                <MobileSidebar onClose={() => setIsSidebarOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
       </div>
-    </header>
+    </m.header>
   )
 } 

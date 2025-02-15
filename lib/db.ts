@@ -1,8 +1,8 @@
+import { PrismaClient } from "@prisma/client"
 import { prisma as client } from "@/lib/prisma"
-import type { PrismaClient as PrismaClientType } from "@/types/prisma"
 
 declare global {
-  var prisma: PrismaClientType | undefined
+  var prisma: PrismaClient | undefined
 }
 
 export const db = globalThis.prisma || client

@@ -4,7 +4,7 @@ import { formatDate } from "@/lib/utils"
 import { Plus } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 
 // Обновляем интерфейс в соответствии с моделью из базы данных

@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence, HTMLMotionProps } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
+import type { HTMLMotionProps } from "framer-motion"
+import { useAnimation } from "@/components/providers/animation-provider"
 import { cn } from "@/lib/utils"
 
 interface Card3DProps extends Omit<HTMLMotionProps<"div">, "children"> {
@@ -12,6 +14,7 @@ interface Card3DProps extends Omit<HTMLMotionProps<"div">, "children"> {
 export function Card3D({ className, children, gradient, ...props }: Card3DProps) {
   const [rotate, setRotate] = useState({ x: 0, y: 0 })
   const [isHovered, setIsHovered] = useState(false)
+  const { m, isReady } = useAnimation()
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const card = e.currentTarget
@@ -32,8 +35,27 @@ export function Card3D({ className, children, gradient, ...props }: Card3DProps)
     setRotate({ x: 0, y: 0 })
   }
 
+  if (!isReady || !m) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-xl backdrop-blur-sm",
+          "border border-white/10 bg-white/5",
+          "transition-all duration-300 ease-out",
+          "hover:shadow-xl hover:shadow-primary/20",
+          gradient,
+          className
+        )}
+      >
+        {children}
+      </div>
+    )
+  }
+
+  const MotionDiv = m.div
+
   return (
-    <motion.div
+    <MotionDiv
       {...props}
       className={cn(
         "relative overflow-hidden rounded-xl backdrop-blur-sm",
@@ -57,7 +79,7 @@ export function Card3D({ className, children, gradient, ...props }: Card3DProps)
       {children}
       <AnimatePresence>
         {isHovered && (
-          <motion.div
+          <MotionDiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -65,12 +87,12 @@ export function Card3D({ className, children, gradient, ...props }: Card3DProps)
           />
         )}
       </AnimatePresence>
-      <motion.div
+      <MotionDiv
         className="absolute inset-0 bg-gradient-to-br from-transparent to-white/5 pointer-events-none"
         initial={{ opacity: 0 }}
         animate={{ opacity: isHovered ? 1 : 0 }}
         transition={{ duration: 0.3 }}
       />
-    </motion.div>
+    </MotionDiv>
   )
 } 

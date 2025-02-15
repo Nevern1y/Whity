@@ -1,12 +1,11 @@
 export interface Notification {
   id: string
+  type: "message" | "course" | "achievement" | "news" | "system"
   title: string
   message: string
-  type: string
   read: boolean
-  createdAt: Date
-  userId: string
-  groupId?: string
+  createdAt: string
+  data?: Record<string, any>
 }
 
 export interface NotificationEvents {

@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client"
 import { Server as SocketIOServer } from "socket.io"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { toast } from "sonner"
 import type { 
   ClientToServerEvents, 

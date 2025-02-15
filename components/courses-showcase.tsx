@@ -1,77 +1,62 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { ArrowRight, BookOpen, Users, Clock } from "lucide-react"
-import Link from "next/link"
-import { WaveCard } from "@/components/ui/wave-card"
+import { useAnimation } from "@/components/providers/animation-provider"
+import { Card } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
-const featuredCourses = [
-  {
-    title: "Современное птицеводство",
-    description: "Комплексный курс по управлению птицефабрикой",
-    students: 234,
-    duration: "6 недель",
-    level: "Продвинутый",
-    href: "/courses/modern-poultry",
-  },
-  {
-    title: "Ветеринария птиц",
-    description: "Диагностика и лечение заболеваний",
-    students: 189,
-    duration: "8 недель",
-    level: "Профессиональный",
-    href: "/courses/bird-veterinary",
-  },
-  {
-    title: "Генетика в птицеводстве",
-    description: "Основы селекции и разведения",
-    students: 156,
-    duration: "4 недели",
-    level: "Базовый",
-    href: "/courses/poultry-genetics",
-  },
-]
+interface Course {
+  id: string
+  title: string
+  description: string
+  image?: string
+  level: string
+  duration: string
+}
 
-export function CoursesShowcase() {
+interface CoursesShowcaseProps {
+  courses: Course[]
+}
+
+export function CoursesShowcase({ courses }: CoursesShowcaseProps) {
+  const { m } = useAnimation()
+
   return (
-    <section className="py-20">
-      <div className="container px-4">
-        <motion.h2
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {courses.map((course, index) => (
+        <m.div
+          key={course.id}
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-3xl md:text-4xl font-bold text-center mb-12"
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          whileHover={{ y: -5 }}
         >
-          Популярные курсы
-        </motion.h2>
-        <div className="grid md:grid-cols-3 gap-6">
-          {featuredCourses.map((course, index) => (
-            <Link key={course.title} href={course.href}>
-              <WaveCard
-                className="h-full cursor-pointer"
-                icon={<BookOpen className="h-6 w-6 text-white" />}
-                title={course.title}
-                subtitle={course.description}
-              >
-                <div className="mt-4 flex items-center justify-between text-sm text-white/80">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>{course.students} студентов</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>{course.duration}</span>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-center text-white font-medium">
-                  <span className="mr-2">Подробнее</span>
-                  <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-                </div>
-              </WaveCard>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
+          <Card className={cn(
+            "overflow-hidden h-full",
+            "transition-colors duration-200",
+            "hover:shadow-lg hover:border-primary/20"
+          )}>
+            {course.image && (
+              <div className="relative h-48 w-full">
+                <img
+                  src={course.image}
+                  alt={course.title}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              </div>
+            )}
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-2">{course.title}</h3>
+              <p className="text-muted-foreground mb-4 line-clamp-2">
+                {course.description}
+              </p>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>{course.level}</span>
+                <span>{course.duration}</span>
+              </div>
+            </div>
+          </Card>
+        </m.div>
+      ))}
+    </div>
   )
 } 

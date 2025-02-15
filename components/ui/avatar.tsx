@@ -25,28 +25,21 @@ const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, src, alt = "", ...props }, ref) => {
-  const [error, setError] = React.useState(false);
+  const [error, setError] = React.useState(false)
+  const [isLoading, setIsLoading] = React.useState(true)
 
   if (!src || error) {
-    return (
-      <AvatarFallback>
-        {alt?.charAt(0)?.toUpperCase() || '?'}
-      </AvatarFallback>
-    );
+    return <AvatarPrimitive.Fallback />
   }
 
   return (
-    <div className="relative h-full w-full">
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        className={cn("aspect-square h-full w-full object-cover", className)}
-        sizes="(max-width: 40px) 100vw, 40px"
-        priority
-        onError={() => setError(true)}
-      />
-    </div>
+    <AvatarPrimitive.Image
+      ref={ref}
+      src={src}
+      alt={alt}
+      className={cn("h-full w-full object-cover", className)}
+      {...props}
+    />
   )
 })
 AvatarImage.displayName = AvatarPrimitive.Image.displayName
@@ -58,7 +51,9 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      "flex h-full w-full items-center justify-center rounded-full",
+      "bg-gradient-to-br from-primary/10 to-primary/5",
+      "text-primary font-medium",
       className
     )}
     {...props}

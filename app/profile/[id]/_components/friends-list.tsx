@@ -1,62 +1,61 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FriendshipStatusBadge } from "@/components/friendship-status-badge"
+import { useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { UserAvatar } from "@/components/user-avatar"
 import Link from "next/link"
-
-interface Friend {
-  id: string
-  name: string | null
-  image: string | null
-  email: string | null
-}
-
-interface Friendship {
-  id: string
-  sender: Friend
-  receiver: Friend
-  status: string
-}
+import { cn } from "@/lib/utils"
+import type { FriendshipWithUsers } from "@/types/friends"
 
 interface FriendsListProps {
-  sentFriendships: Friendship[]
-  receivedFriendships: Friendship[]
+  allFriendships: FriendshipWithUsers[]
 }
 
-export function FriendsList({ sentFriendships, receivedFriendships }: FriendsListProps) {
-  const allFriendships = [...sentFriendships, ...receivedFriendships]
+export function FriendsList({ allFriendships }: FriendsListProps) {
+  // Filter out invalid friendships
+  const validFriendships = allFriendships.filter(friendship => 
+    friendship.sender && 
+    friendship.receiver && 
+    friendship.sender.id && 
+    friendship.receiver.id
+  )
+
+  if (validFriendships.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-muted-foreground">Нет друзей</p>
+      </div>
+    )
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {allFriendships.map((friendship) => {
+      {validFriendships.map((friendship) => {
         const friend = friendship.sender.id === friendship.receiver.id 
           ? friendship.receiver 
           : friendship.sender
 
         return (
-          <Card key={friendship.id}>
+          <Card key={friendship.id} className="overflow-hidden">
             <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <Avatar>
-                  <AvatarImage src={friend.image || undefined} />
-                  <AvatarFallback>
-                    {friend.name?.[0] || friend.email?.[0] || '?'}
-                  </AvatarFallback>
-                </Avatar>
+              <Link 
+                href={`/profile/${friend.id}`}
+                className="flex items-center gap-4"
+              >
+                <UserAvatar 
+                  user={friend}
+                  className="h-12 w-12"
+                />
                 <div className="flex-1 min-w-0">
-                  <Link 
-                    href={`/profile/${friend.id}`}
-                    className="font-medium hover:underline truncate block"
-                  >
+                  <p className="font-medium truncate">
                     {friend.name || friend.email}
-                  </Link>
-                  <FriendshipStatusBadge 
-                    status={friendship.status as any}
-                    isIncoming={friendship.receiver.id === friend.id}
-                  />
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {friend.email}
+                  </p>
                 </div>
-              </div>
+              </Link>
             </CardContent>
           </Card>
         )

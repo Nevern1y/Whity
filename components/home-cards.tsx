@@ -1,57 +1,52 @@
 "use client"
 
-import { Card3D } from "@/components/ui/card-3d"
-import { navigation } from "@/config/navigation"
-import Link from "next/link"
-import { motion } from "framer-motion"
+import { Card } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
+import { BookOpen, Users, Award } from "lucide-react"
+import { useAnimation } from "@/components/providers/animation-provider"
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-}
+const cards = [
+  {
+    title: "Современные методики",
+    description: "Актуальные знания от ведущих экспертов отрасли",
+    icon: BookOpen,
+  },
+  {
+    title: "Сообщество",
+    description: "Общение с коллегами и обмен опытом",
+    icon: Users,
+  },
+  {
+    title: "Сертификация",
+    description: "Официальные сертификаты о прохождении курсов",
+    icon: Award,
+  },
+]
 
-const variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
-} as const;
+export function HomeCards() {
+  const { m } = useAnimation()
 
-export default function HomeCards() {
   return (
-    <motion.div 
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      variants={container}
-      initial="hidden"
-      animate="show"
-    >
-      {navigation.map((group) =>
-        group.items.map((item) => (
-          <motion.div key={item.href} variants={variants}>
-            <Link href={item.href}>
-              <Card3D
-                className="group p-6"
-                gradient="bg-gradient-to-br from-primary/5 to-primary/10"
-              >
-                <div className="flex items-start space-x-4">
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <item.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{item.name}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Перейти в раздел {item.name.toLowerCase()}
-                    </p>
-                  </div>
-                </div>
-              </Card3D>
-            </Link>
-          </motion.div>
-        ))
-      )}
-    </motion.div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {cards.map((card, index) => (
+        <m.div
+          key={card.title}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          whileHover={{ y: -5 }}
+        >
+          <Card className={cn(
+            "p-6 h-full",
+            "transition-colors duration-200",
+            "hover:shadow-lg hover:border-primary/20"
+          )}>
+            <card.icon className="h-8 w-8 text-primary mb-4" />
+            <h3 className="text-lg font-semibold mb-2">{card.title}</h3>
+            <p className="text-muted-foreground">{card.description}</p>
+          </Card>
+        </m.div>
+      ))}
+    </div>
   )
 } 

@@ -1,25 +1,24 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { Header } from "@/components/header"
+import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/toaster"
 import { Footer } from "@/components/footer"
 import { Providers } from "@/components/providers"
 import { AchievementPopup } from "@/components/achievements/achievement-popup"
 import { useUserStore } from "@/lib/store/user-store"
-import { auth } from "@/lib/auth"
-import { SocketProvider } from "@/components/providers/socket-provider"
-import { RedirectHandler } from "@/components/providers/redirect-handler"
-import { OnlineStatusHandler } from "@/app/components/providers/online-status-handler"
-import { StatusHandler } from "@/components/providers/status-handler"
+import { auth } from "@/auth"
 import { headers } from 'next/headers'
-import { WebSocketProvider } from '@/providers/websocket-provider'
+import { themeScript } from "./theme-script"
+import { Layout } from "@/components/layout"
+import { GeistSans } from "geist/font/sans"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
 export const metadata: Metadata = {
   title: {
-    default: "АЛЛЕЛЬ АГРО",
-    template: "%s | АЛЛЕЛЬ АГРО"
+    default: "АЛЕЛЬ АГРО",
+    template: "%s | АЛЕЛЬ АГРО"
   },
   description: "Образовательная платформа для специалистов агропромышленности",
   icons: {
@@ -50,17 +49,24 @@ export default async function RootLayout({
 
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body className={inter.className}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript() }} />
+      </head>
+      <body className={cn(
+        inter.className,
+        "min-h-screen bg-background antialiased layout-container",
+        "selection:bg-primary selection:text-primary-foreground",
+        GeistSans.className
+      )}>
         <Providers>
-          <RedirectHandler />
-          <OnlineStatusHandler />
-          <StatusHandler />
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <Layout>
+            <div className="relative flex min-h-screen flex-col">
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+          </Layout>
           <AchievementPopup />
+          <Toaster />
         </Providers>
       </body>
     </html>

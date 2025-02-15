@@ -1,6 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
+const { m } = useAnimation()
+import { useAnimation } from "@/components/providers/animation-provider"
 import { Card, CardContent } from "@/components/ui/card"
 import { BookOpen, Trophy, Star, Users2 } from "lucide-react"
 
@@ -24,7 +25,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {statCards.map((stat, index) => (
-        <motion.div
+        <m.div
           key={stat.label}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -43,7 +44,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </m.div>
       ))}
     </div>
   )

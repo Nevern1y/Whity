@@ -30,30 +30,22 @@ export async function POST(req: Request) {
           email,
           name,
           hashedPassword,
-          settings: {
-            create: {
-              notifications: {
-                email: true,
-                push: false,
-                sounds: true,
-                updates: true,
-                newsletter: false
-              }
-            }
-          },
-          statistics: {
-            create: {
-              totalTimeSpent: 0,
-              currentStreak: 0
-            }
-          }
-        },
-        include: {
-          settings: true,
-          statistics: true
+          role: "USER",
         }
       })
+
+      // Создаем начальное уведомление для пользователя
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          title: "Добро пожаловать!",
+          message: "Рады видеть вас на нашей платформе. Начните свое обучение прямо сейчас!",
+          type: "WELCOME",
+        }
+      })
+
       console.log("[REGISTER] User created:", { id: user.id, email: user.email })
+      
       return NextResponse.json({
         user: {
           id: user.id,

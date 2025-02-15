@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { emitSocketEvent } from "@/lib/socket-server"
+
+const MESSAGES_PER_PAGE = 50
 
 export async function GET(
-  request: Request,
-  context: { params: Promise<{ userId: string }> }
+  req: Request,
+  { params }: { params: { userId: string } }
 ) {
   try {
     const session = await auth()
@@ -12,17 +15,74 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { userId } = await context.params
-    if (!userId) {
-      return new NextResponse("Missing userId", { status: 400 })
+    const { searchParams } = new URL(req.url)
+    const cursor = searchParams.get("cursor")
+    const recipientId = params.userId
+
+    // Validate recipient
+    if (recipientId === session.user.id) {
+      return new NextResponse("Cannot message yourself", { status: 400 })
     }
 
-    const messages = await prisma.message.findMany({
+    // Get recipient status
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: {
+        id: true,
+        isOnline: true,
+        lastActive: true,
+      },
+    })
+
+    if (!recipient) {
+      return new NextResponse("Recipient not found", { status: 404 })
+    }
+
+    // Check friendship status
+    const friendship = await prisma.friendship.findFirst({
       where: {
         OR: [
-          { senderId: session.user.id, receiverId: userId },
-          { senderId: userId, receiverId: session.user.id }
-        ]
+          {
+            senderId: session.user.id,
+            receiverId: recipientId,
+          },
+          {
+            senderId: recipientId,
+            receiverId: session.user.id,
+          },
+        ],
+      },
+    })
+
+    if (!friendship) {
+      return new NextResponse("No friendship found", { status: 403 })
+    }
+
+    if (friendship.status !== 'ACCEPTED') {
+      return new NextResponse(
+        friendship.status === 'PENDING'
+          ? "Friend request is pending"
+          : "Users must be friends to view messages",
+        { status: 403 }
+      )
+    }
+
+    // Query messages with pagination
+    const messages = await prisma.message.findMany({
+      take: MESSAGES_PER_PAGE,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      where: {
+        OR: [
+          {
+            senderId: session.user.id,
+            receiverId: recipientId,
+          },
+          {
+            senderId: recipientId,
+            receiverId: session.user.id,
+          },
+        ],
       },
       select: {
         id: true,
@@ -30,41 +90,28 @@ export async function GET(
         createdAt: true,
         senderId: true,
         receiverId: true,
-        read: true,
         sender: {
           select: {
             id: true,
             name: true,
             image: true,
-            isOnline: true,
-            lastActive: true
-          }
-        }
+          },
+        },
       },
       orderBy: {
-        createdAt: 'asc'
-      }
+        createdAt: "desc",
+      },
     })
 
-    const recipient = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        isOnline: true,
-        lastActive: true
-      }
-    })
-
-    const now = new Date().getTime()
-    const lastActive = recipient?.lastActive?.getTime() || 0
-    const OFFLINE_THRESHOLD = 2 * 60 * 1000
-    const isOnline = recipient?.isOnline && (now - lastActive <= OFFLINE_THRESHOLD)
+    const nextCursor = messages.length === MESSAGES_PER_PAGE ? messages[messages.length - 1].id : undefined
 
     return NextResponse.json({
-      messages,
+      messages: messages.reverse(),
+      nextCursor,
       recipient: {
-        isOnline,
-        lastActive: recipient?.lastActive
-      }
+        isOnline: recipient.isOnline,
+        lastActive: recipient.lastActive,
+      },
     })
   } catch (error) {
     console.error("[MESSAGES_GET]", error)
@@ -74,7 +121,7 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  context: { params: Promise<{ userId: string }> }
+  { params }: { params: { userId: string } }
 ) {
   try {
     const session = await auth()
@@ -82,40 +129,94 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { userId } = await context.params
+    const recipientId = params.userId
     const { content } = await request.json()
 
     if (!content?.trim()) {
       return new NextResponse("Message content is required", { status: 400 })
     }
 
-    const message = await prisma.message.create({
-      data: {
-        content,
-        senderId: session.user.id,
-        receiverId: userId
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            image: true
-          }
-        }
+    // Check if recipient exists
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: {
+        id: true,
+        isOnline: true,
+        lastActive: true,
       }
     })
 
+    if (!recipient) {
+      return new NextResponse("Recipient not found", { status: 404 })
+    }
+
+    // Check if users are friends
+    const friendship = await prisma.friendship.findFirst({
+      where: {
+        OR: [
+          {
+            senderId: session.user.id,
+            receiverId: recipientId,
+            status: 'ACCEPTED',
+          },
+          {
+            senderId: recipientId,
+            receiverId: session.user.id,
+            status: 'ACCEPTED',
+          },
+        ],
+      },
+    })
+
+    if (!friendship) {
+      return new NextResponse("Users must be friends to exchange messages", { status: 403 })
+    }
+
+    // Create message and update friendship in a transaction
+    const [message] = await prisma.$transaction([
+      prisma.message.create({
+        data: {
+          content,
+          sender: { connect: { id: session.user.id } },
+          receiver: { connect: { id: recipientId } },
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+      }),
+      prisma.friendship.update({
+        where: { id: friendship.id },
+        data: { updatedAt: new Date() },
+      }),
+    ])
+
+    // Create activity log
     await prisma.activity.create({
       data: {
         userId: session.user.id,
         type: 'MESSAGE',
         description: `Отправил сообщение пользователю`,
         metadata: {
-          receiverId: userId,
+          receiverId: recipientId,
           title: 'Отправил сообщение'
         }
       }
+    })
+
+    // Emit socket event
+    emitSocketEvent("new_message", {
+      id: message.id,
+      content: message.content,
+      senderId: message.sender.id,
+      receiverId: recipientId,
+      createdAt: message.createdAt,
+      sender: message.sender,
     })
 
     return NextResponse.json(message)

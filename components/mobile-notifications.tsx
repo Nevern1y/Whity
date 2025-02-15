@@ -1,105 +1,98 @@
 "use client"
 
-import { useState } from "react"
-import { Bell } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect } from "react"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useNotifications } from "@/hooks/use-notifications"
-import { motion, AnimatePresence } from "framer-motion"
+import { formatDate } from "@/lib/utils"
+import { Bell, MessageSquare, Book, Trophy, Newspaper } from "lucide-react"
+import { useNotifications } from "./notifications/notifications-context"
+import { useAnimation } from "@/components/providers/animation-provider"
+import { AnimatePresence } from "framer-motion"
 
 interface MobileNotificationsProps {
-  onClose?: () => void;
+  onClose: () => void
+}
+
+const notificationIcons = {
+  message: MessageSquare,
+  course: Book,
+  achievement: Trophy,
+  news: Newspaper,
+  system: Bell,
 }
 
 export function MobileNotifications({ onClose }: MobileNotificationsProps) {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
-  const [isOpen, setIsOpen] = useState(false)
+  const { notifications, markAsRead } = useNotifications()
+  const { m } = useAnimation()
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -right-1 -top-1"
-            >
-              <Badge 
-                variant="destructive" 
-                className="h-5 w-5 rounded-full p-0 text-xs"
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="text-lg font-semibold">Уведомления</h2>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <m.div
+          className="space-y-2 p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <AnimatePresence mode="popLayout">
+            {notifications.length === 0 ? (
+              <m.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="text-center py-8 text-muted-foreground"
               >
-                {unreadCount}
-              </Badge>
-            </motion.div>
-          )}
-        </Button>
-      </SheetTrigger>
+                Нет уведомлений
+              </m.div>
+            ) : (
+              notifications.map((notification) => {
+                const Icon = notificationIcons[notification.type as keyof typeof notificationIcons] || Bell
 
-      <SheetContent side="right" className="w-full sm:max-w-md p-0">
-        <div className="flex h-full flex-col">
-          <SheetHeader className="border-b p-4">
-            <div className="flex items-center justify-between">
-              <SheetTitle>Уведомления</SheetTitle>
-              {unreadCount > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => markAllAsRead()}
-                >
-                  Прочитать все
-                </Button>
-              )}
-            </div>
-          </SheetHeader>
-
-          <ScrollArea className="flex-1">
-            <AnimatePresence>
-              {notifications.map((notification, index) => (
-                <motion.div
-                  key={notification.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Card className="border-x-0 border-t-0 rounded-none">
-                    <CardContent className="p-4">
+                return (
+                  <m.div
+                    key={notification.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    layout
+                    layoutId={notification.id}
+                    onClick={() => !notification.read && markAsRead(notification.id)}
+                  >
+                    <Card className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex gap-4">
-                        <div className="flex-1">
-                          <p className="font-medium">{notification.title}</p>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="flex-shrink-0">
+                          <Icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-medium leading-none">
+                              {notification.title}
+                            </p>
+                            {!notification.read && (
+                              <Badge variant="default" className="flex-shrink-0">
+                                Новое
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
                             {notification.message}
                           </p>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {formatDate(notification.createdAt)}
+                          </p>
                         </div>
-                        {!notification.read && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markAsRead(notification.id)}
-                          >
-                            Прочитать
-                          </Button>
-                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </ScrollArea>
-        </div>
-      </SheetContent>
-    </Sheet>
+                    </Card>
+                  </m.div>
+                )
+              })
+            )}
+          </AnimatePresence>
+        </m.div>
+      </div>
+    </div>
   )
 } 

@@ -7,7 +7,7 @@ import { AchievementCard } from "@/components/achievements/achievement-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Trophy, Clock, Flame } from "lucide-react"
 import { StatsCard } from "@/components/achievements/stats-card"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 
 interface UserAchievement {
   id: string;

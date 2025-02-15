@@ -1,51 +1,43 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
-import { motion } from "framer-motion"
+import { useEffect, useRef, useState } from "react"
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useSession } from "next-auth/react"
-import { UserPlus, UserCheck, Heart, Send, Loader2, X } from "lucide-react"
+import { Send, Loader2, X } from "lucide-react"
 import { toast } from "sonner"
-import { socketClient } from "@/lib/socket-client"
 import { UserAvatar } from "@/components/user-avatar"
-import { AddFriendButton } from "@/components/add-friend-button"
-import type { ChatMessage } from "@/types/socket"
-import Link from "next/link"
 import { UserProfilePopover } from "@/components/user-profile-popover"
 import { UserOnlineStatus } from "@/components/user-online-status"
+import { useRouter } from "next/navigation"
+import { useSocket } from "@/hooks/use-socket"
 
-// Общий интерфейс для сообщений
-interface BaseMessage {
+interface Message {
   id: string
   content: string
   senderId: string
+  receiverId: string
+  createdAt: string | Date
   sender: {
+    id: string
     name: string | null
     image: string | null
   }
 }
 
-// Расширенный интерфейс для сообщений из API
-interface Message extends BaseMessage {
-  recipientId: string
-  createdAt: Date
-}
-
-// Функция для преобразования даты из строки в Date
-function convertMessage(message: ChatMessage, currentRecipientId: string): Message {
-  return {
-    id: message.id,
-    content: message.content,
-    senderId: message.senderId,
-    recipientId: currentRecipientId,
-    createdAt: new Date(message.createdAt),
-    sender: message.sender
-  }
+interface MessageResponse {
+  messages: Message[]
+  nextCursor?: string
+  recipient: {
+    isOnline: boolean
+    lastActive: string | null
+  } | null
+  error?: string
 }
 
 interface MessageListProps {
@@ -55,8 +47,7 @@ interface MessageListProps {
     name: string | null
     image: string | null
     email: string | null
-    sentFriendships?: Array<{ status: string }>
-    receivedFriendships?: Array<{ status: string }>
+    isOnline?: boolean
   }
   friendshipStatus?: string
   onClose: () => void
@@ -64,329 +55,350 @@ interface MessageListProps {
 
 export function MessageList({ recipientId, recipient, friendshipStatus, onClose }: MessageListProps) {
   const { data: session } = useSession()
-  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const [recipientStatus, setRecipientStatus] = useState({ isOnline: false, lastActive: null })
+  const parentRef = useRef<HTMLDivElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const socket = useSocket()
 
-  const scrollToBottom = useCallback(() => {
-    if (shouldScrollToBottom && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-    }
-  }, [shouldScrollToBottom])
-
-  useEffect(() => {
-    const loadMessages = async () => {
-      try {
-        const res = await fetch(`/api/messages/${recipientId}`)
-        const data = await res.json()
-        setMessages(data.messages)
-        setRecipientStatus(data.recipient)
-        setShouldScrollToBottom(true)
-      } catch (error) {
-        console.error('Failed to load messages:', error)
+  // Fetch messages with infinite query
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    status,
+    error
+  } = useInfiniteQuery<MessageResponse, Error>({
+    queryKey: ['messages', recipientId],
+    queryFn: async ({ pageParam }) => {
+      const res = await fetch(`/api/messages/${recipientId}?cursor=${pageParam || ''}`)
+      const data = await res.json()
+      
+      if (!res.ok) {
+        if (res.status === 404) {
+          toast.error('Пользователь не найден')
+          router.push('/friends')
+          throw new Error('User not found')
+        }
+        throw new Error(data.error || 'Failed to fetch messages')
       }
+      
+      return data
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: null,
+    retry: false,
+  })
+
+  // Flatten messages from all pages
+  const messages = data?.pages.flatMap(page => page.messages) || []
+  const recipientStatus = data?.pages[0]?.recipient
+
+  // Setup virtualizer
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 70,
+    overscan: 5,
+  })
+
+  // Socket event listener for new messages
+  useEffect(() => {
+    if (!socket) return
+
+    const handleNewMessage = (message: Message) => {
+      // Only handle messages for this chat
+      if (message.senderId !== recipientId && message.receiverId !== recipientId) return
+
+      queryClient.setQueryData(['messages', recipientId], (oldData: any) => {
+        if (!oldData?.pages?.[0]) return oldData
+        const newPages = [...oldData.pages]
+        newPages[0] = {
+          ...newPages[0],
+          messages: [...newPages[0].messages, message]
+        }
+        return {
+          ...oldData,
+          pages: newPages
+        }
+      })
+
+      // Scroll to bottom when new message arrives
+      setShouldScrollToBottom(true)
     }
+
+    socket.on('new_message', handleNewMessage)
     
-    loadMessages()
-    const interval = setInterval(loadMessages, 30000)
-    return () => clearInterval(interval)
-  }, [recipientId])
-
-  useEffect(() => {
-    if (shouldScrollToBottom) {
-      scrollToBottom()
+    return () => {
+      socket.off('new_message', handleNewMessage)
     }
-  }, [messages, shouldScrollToBottom, scrollToBottom])
+  }, [socket, recipientId, queryClient])
 
+  // Handle scroll
   useEffect(() => {
-    const container = messagesContainerRef.current
+    const container = parentRef.current
     if (!container) return
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
       setShouldScrollToBottom(isNearBottom)
+
+      // Load more messages when scrolling up
+      if (scrollTop === 0 && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
     }
 
     container.addEventListener('scroll', handleScroll)
     return () => container.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (shouldScrollToBottom && parentRef.current) {
+      parentRef.current.scrollTop = parentRef.current.scrollHeight
+    }
+  }, [messages.length, shouldScrollToBottom])
+
+  // Send message
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || isLoading) return
 
     try {
       setIsLoading(true)
-      const response = await fetch("/api/messages", {
+      const response = await fetch(`/api/messages/${recipientId}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content: newMessage.trim(),
-          recipientId: recipientId
+          content: newMessage.trim()
         }),
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to send message")
+        const data = await response.json()
+        if (response.status === 404) {
+          toast.error('Пользователь не найден')
+          router.push('/friends')
+          return
+        }
+        if (response.status === 403) {
+          toast.error('Нужно быть друзьями для обмена сообщениями')
+          return
+        }
+        throw new Error(data.error || 'Failed to send message')
       }
 
-      const message = await response.json()
-      setMessages(prev => [...prev, message])
+      const newMessageData = await response.json()
+      
+      // Optimistically update the messages list
+      queryClient.setQueryData(['messages', recipientId], (oldData: any) => {
+        if (!oldData?.pages?.[0]) return oldData
+        const newPages = [...oldData.pages]
+        newPages[0] = {
+          ...newPages[0],
+          messages: [...newPages[0].messages, newMessageData]
+        }
+        return {
+          ...oldData,
+          pages: newPages
+        }
+      })
+
       setNewMessage("")
       setShouldScrollToBottom(true)
     } catch (error) {
-      console.error("Error sending message:", error)
       toast.error("Не удалось отправить сообщение")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const canSendMessage = friendshipStatus === 'ACCEPTED'
+  const renderContent = () => {
+    if (status === 'pending') {
+      return (
+        <div className="flex justify-center items-center h-full">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      )
+    }
 
-  return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-card shadow-sm">
-        <div 
-          className="flex items-center gap-3 cursor-pointer group relative"
-          onClick={() => window.open(`/profile/${recipient.id}`, '_blank')}
-        >
-          <div className="relative">
-            <UserAvatar
-              user={recipient}
-              className="h-10 w-10 transition-transform group-hover:scale-105"
-            />
-            <span className={cn(
-              "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
-              recipientStatus.isOnline ? "bg-green-500" : "bg-red-500"
-            )} />
-          </div>
-          <div className="group-hover:opacity-80 transition-opacity">
-            <p className="font-medium line-clamp-1 flex items-center gap-2">
-              {recipient.name}
-              <span className="text-xs text-muted-foreground/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-              </span>
+    if (status === 'error') {
+      if (error?.message === 'User not found') {
+        return (
+          <div className="flex flex-col justify-center items-center h-full gap-4">
+            <p className="text-destructive">
+              Пользователь не найден
             </p>
-            <UserOnlineStatus 
-              isOnline={recipientStatus.isOnline}
-              showDot={false}
-              className="text-xs"
-            />
+            <Button onClick={() => router.push('/friends')}>
+              Вернуться к списку друзей
+            </Button>
           </div>
+        )
+      }
 
-          {/* Quick Profile Preview - улучшенный дизайн */}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-            <div className="bg-popover text-popover-foreground rounded-lg shadow-lg w-80 border overflow-hidden">
-              {/* Градиентный фон */}
-              <div className="h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-background relative">
-                {/* Аватар */}
-                <div className="absolute left-1/2 -bottom-12 -translate-x-1/2">
-                  <div className="p-1.5 bg-background rounded-full ring-4 ring-background">
-                    <UserAvatar
-                      user={recipient}
-                      className="h-20 w-20"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Информация о пользователе */}
-              <div className="pt-14 pb-4 px-4">
-                <div className="text-center space-y-1">
-                  <h3 className="font-semibold text-lg">{recipient.name}</h3>
-                  <p className="text-sm text-muted-foreground">{recipient.email || 'Email не указан'}</p>
-                  <div className="flex items-center justify-center mt-2">
-                    <span className={cn(
-                      "relative flex h-2.5 w-2.5 mr-2",
-                    )}>
-                      <span className={cn(
-                        "absolute inline-flex h-full w-full rounded-full",
-                        recipientStatus.isOnline ? "bg-green-500" : "bg-red-500/50"
-                      )}/>
-                      {recipientStatus.isOnline && (
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"/>
-                      )}
-                    </span>
-                    <span className={cn(
-                      "text-sm",
-                      recipientStatus.isOnline ? "text-green-500" : "text-red-500"
-                    )}>
-                      {recipientStatus.isOnline ? "В сети" : "Не в сети"}
-                      {!recipientStatus.isOnline && recipientStatus.lastActive && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          (Был(а) в сети {format(new Date(recipientStatus.lastActive), 'dd.MM.yyyy HH:mm', { locale: ru })})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Статус и информация */}
-                <div className="mt-4 flex justify-center gap-6">
-                  {friendshipStatus === 'ACCEPTED' && (
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5 text-sm">
-                        <UserCheck className="h-4 w-4 text-primary" />
-                        <span className="text-muted-foreground">В друзьях</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Разделитель */}
-                <div className="my-4 border-t border-border/40" />
-
-                {/* Действия */}
-                <div className="flex gap-2 px-2">
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      window.open(`/profile/${recipient.id}`, '_blank')
-                    }}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Профиль
-                  </Button>
-                  {friendshipStatus !== 'ACCEPTED' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // Здесь логика добавления в друзья
-                      }}
-                    >
-                      <Heart className="h-4 w-4 mr-2" />
-                      Добавить
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+      return (
+        <div className="flex justify-center items-center h-full text-destructive">
+          Ошибка загрузки сообщений
         </div>
+      )
+    }
 
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onClose} 
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div 
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-background to-muted/20"
+    return (
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
       >
-        {messages.map((message, index) => {
-          const isCurrentUser = message.senderId === session?.user?.id
-          const showAvatar = !isCurrentUser && 
-            (!messages[index - 1] || messages[index - 1].senderId !== message.senderId)
-
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const message = messages[virtualRow.index]
+          const isOwnMessage = message.senderId === session?.user?.id
+          
           return (
             <div
               key={message.id}
+              ref={virtualizer.measureElement}
+              data-index={virtualRow.index}
               className={cn(
-                "flex items-end gap-2",
-                isCurrentUser ? "justify-end" : "justify-start"
+                "flex gap-2 mb-4",
+                isOwnMessage ? "flex-row-reverse" : "flex-row"
               )}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
             >
-              <div className={cn("flex items-end gap-2 max-w-[75%]", 
-                isCurrentUser ? "flex-row-reverse" : "flex-row"
-              )}>
-                {!isCurrentUser && showAvatar && (
-                  <UserAvatar
-                    user={message.sender}
-                    className="h-6 w-6 mb-1"
-                    size="sm"
-                  />
+              {!isOwnMessage && (
+                <UserAvatar
+                  user={{
+                    name: message.sender.name,
+                    image: message.sender.image,
+                  }}
+                  className="h-8 w-8 flex-shrink-0"
+                />
+              )}
+              <div
+                className={cn(
+                  "rounded-lg p-3 max-w-[70%] break-words",
+                  isOwnMessage
+                    ? "bg-primary text-primary-foreground ml-auto"
+                    : "bg-muted"
                 )}
-                {!isCurrentUser && !showAvatar && (
-                  <div className="w-6" /> // Placeholder для выравнивания
-                )}
-                <div
-                  className={cn(
-                    "px-3 py-2 rounded-2xl break-words",
-                    isCurrentUser ? 
-                      "bg-primary text-primary-foreground rounded-br-none" : 
-                      "bg-muted rounded-bl-none",
-                    "shadow-sm"
-                  )}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p className={cn(
-                    "text-[10px] mt-1",
-                    isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}>
-                    {format(new Date(message.createdAt), 'HH:mm')}
-                  </p>
-                </div>
+              >
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <span className={cn(
+                  "text-[10px] mt-1 block",
+                  isOwnMessage ? "text-primary-foreground/70" : "text-muted-foreground"
+                )}>
+                  {format(new Date(message.createdAt), 'HH:mm', { locale: ru })}
+                </span>
               </div>
             </div>
           )
         })}
-        <div ref={messagesEndRef} />
+      </div>
+    )
+  }
+
+  const userWithOnline = {
+    ...recipient,
+    isOnline: recipientStatus?.isOnline ?? false,
+    role: 'USER',
+    coursesCompleted: 0,
+    achievementsCount: 0,
+  }
+
+  const avatarTrigger = (
+    <div className="relative cursor-pointer">
+      <UserAvatar
+        user={{
+          name: recipient.name,
+          image: recipient.image,
+        }}
+        className="h-10 w-10 flex-shrink-0"
+      />
+      <span className={cn(
+        "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
+        recipientStatus?.isOnline ? "bg-green-500" : "bg-red-500"
+      )} />
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
+        <div className="flex items-center gap-3 min-w-0">
+          <UserProfilePopover 
+            user={userWithOnline}
+            trigger={avatarTrigger}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium truncate">{recipient.name}</p>
+            <UserOnlineStatus 
+              isOnline={recipientStatus?.isOnline ?? false}
+              showDot={false}
+              className="text-xs"
+            />
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="flex-shrink-0"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Messages */}
+      <div
+        ref={parentRef}
+        className="flex-1 overflow-auto p-4"
+        style={{ height: 'calc(100vh - 180px)' }}
+      >
+        {renderContent()}
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t bg-card">
-        <form onSubmit={sendMessage} className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={
-              canSendMessage
-                ? "Введите сообщение..."
-                : "Добавьте пользователя в друзья для отправки сообщений"
-            }
-            disabled={!canSendMessage || isLoading}
-            className="bg-muted/50"
-          />
-          <Button 
-            type="submit" 
-            size="icon"
-            disabled={!canSendMessage || !newMessage.trim() || isLoading}
-            className="shrink-0"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+      {friendshipStatus === 'ACCEPTED' ? (
+        <form onSubmit={sendMessage} className="p-4 border-t bg-card">
+          <div className="flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Введите сообщение..."
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button 
+              type="submit" 
+              disabled={isLoading || !newMessage.trim()}
+              className="flex-shrink-0"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </form>
-      </div>
+      ) : (
+        <div className="p-4 border-t bg-card text-center text-sm text-muted-foreground">
+          Чтобы отправлять сообщения, нужно добавить пользователя в друзья
+        </div>
+      )}
     </div>
   )
 } 

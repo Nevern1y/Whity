@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { getToken } from "next-auth/jwt"
 import { prisma } from "@/lib/prisma"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 
 export async function middleware(request: NextRequest) {
   // Пропускаем статические файлы и API запросы
@@ -15,49 +15,98 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = await getToken({ 
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET 
-  })
+  const token = await getToken({ req: request })
 
-  // Защищенные роуты
-  const protectedPaths = ['/admin', '/courses/create', '/settings', '/profile', '/messages']
+  // Public paths that don't require authentication
+  const publicPaths = [
+    '/',
+    '/login',
+    '/register',
+    '/auth/signin',
+    '/auth/signup',
+    '/about',
+    '/contact'
+  ]
+
+  // Paths that require authentication
+  const protectedPaths = [
+    '/admin',
+    '/courses/create',
+    '/settings',
+    '/profile',
+    '/messages'
+  ]
+
+  // Paths that require admin role
+  const adminPaths = [
+    '/admin',
+    '/admin/users',
+    '/admin/courses',
+    '/admin/articles',
+    '/admin/database',
+    '/admin/security',
+    '/admin/settings',
+    '/courses/create'
+  ]
+
+  // Paths that require manager role
+  const managerPaths = [
+    '/admin',
+    '/admin/courses',
+    '/admin/articles',
+    '/admin/activity'
+  ]
+
+  const { pathname } = request.nextUrl
+
+  // Check if path is protected
   const isProtectedPath = protectedPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
+    pathname.startsWith(path)
   )
 
+  // Check if path requires admin role
+  const isAdminPath = adminPaths.some(path => 
+    pathname.startsWith(path)
+  )
+
+  // Check if path requires manager role
+  const isManagerPath = managerPaths.some(path => 
+    pathname.startsWith(path)
+  )
+
+  // Redirect to login if accessing protected path without token
   if (isProtectedPath && !token) {
     const url = new URL('/login', request.url)
-    url.searchParams.set('callbackUrl', request.nextUrl.pathname)
+    url.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(url)
   }
 
-  // Проверка прав администратора
-  const adminPaths = ['/admin', '/courses/create']
-  const isAdminPath = adminPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
-  )
-  
+  // Redirect to home if accessing admin path without admin role
   if (isAdminPath && token?.role !== 'ADMIN') {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Редирект с /login если пользователь уже авторизован
-  if (request.nextUrl.pathname === '/login' && token) {
+  // Redirect to home if accessing manager path without admin or manager role
+  if (isManagerPath && !['ADMIN', 'MANAGER'].includes(token?.role as string)) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Redirect to home if accessing login/register while authenticated
+  if (token && (pathname === '/login' || pathname === '/register')) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
   const response = NextResponse.next()
 
   // Set the show-sidebar cookie based on the current path
-  if (request.nextUrl.pathname === "/") {
+  if (pathname === "/") {
     response.cookies.set("show-sidebar", "0")
   } else {
     response.cookies.set("show-sidebar", "1")
   }
 
   // Обработка WebSocket запросов
-  if (request.nextUrl.pathname.startsWith('/api/socket.io')) {
+  if (pathname.startsWith('/api/socket.io')) {
     const response = NextResponse.next()
     
     // Устанавливаем CORS заголовки только для WebSocket
@@ -72,7 +121,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Обработка статических файлов
-  if (request.nextUrl.pathname.startsWith('/uploads/')) {
+  if (pathname.startsWith('/uploads/')) {
     // Устанавливаем правильные заголовки для изображений
     response.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
     response.headers.set('Content-Type', 'image/jpeg') // или другой тип в зависимости от файла
@@ -91,13 +140,14 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
-     * 1. /api/ (API routes)
-     * 2. /_next/ (Next.js internals)
-     * 3. /static (static files)
-     * 4. /*.* (files with extensions)
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
      */
-    '/((?!api|_next|static|[\\w-]+\\.\\w+).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
   ],
 }
 

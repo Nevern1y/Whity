@@ -3,14 +3,16 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Sprout } from "lucide-react"
+import React from "react"
 
 interface LogoProps {
   className?: string
   showText?: boolean
   asLink?: boolean
+  wrapper?: React.ReactElement
 }
 
-export function Logo({ className, showText = true, asLink = true }: LogoProps) {
+export function Logo({ className, showText = true, asLink = true, wrapper }: LogoProps) {
   const content = (
     <>
       <div className="relative">
@@ -40,6 +42,14 @@ export function Logo({ className, showText = true, asLink = true }: LogoProps) {
     className
   )
 
+  // If a wrapper is provided, clone it with the content
+  if (wrapper) {
+    return React.cloneElement(wrapper, {
+      className: cn(wrapper.props.className, styles)
+    }, content)
+  }
+
+  // If asLink is true and no wrapper is provided, wrap in Link
   if (asLink) {
     return (
       <Link href="/" className={styles}>
@@ -48,5 +58,6 @@ export function Logo({ className, showText = true, asLink = true }: LogoProps) {
     )
   }
 
+  // Otherwise just return the content in a div
   return <div className={styles}>{content}</div>
 } 

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Clock, Users, Star } from "lucide-react"
 import Image from "next/image"
 import { prisma } from "@/lib/prisma"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { notFound } from "next/navigation"
 import type { Course, Lesson } from "@/types/prisma"
 

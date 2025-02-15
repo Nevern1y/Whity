@@ -1,115 +1,236 @@
 "use client"
 
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { prisma } from "@/lib/prisma"
-import { Activity } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Users, BookOpen, FileText, Activity,
+  TrendingUp, UserPlus, BookMarked, FileUp
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { Progress } from "@/components/ui/progress"
 
-type Activity = {
-  id: number
-  action: string
-  timestamp: string
+interface Stats {
+  users: {
+    total: number
+    active: number
+    newToday: number
+    growth: number
+  }
+  courses: {
+    total: number
+    published: number
+    inProgress: number
+    averageRating: number
+  }
+  articles: {
+    total: number
+    published: number
+    draft: number
+    views: number
+  }
+  activities: Activity[]
 }
 
-async function getAdminData() {
-  const [userCount, courseCount, articleCount] = await Promise.all([
-    prisma.user.count(),
-    prisma.course.count(),
-    prisma.article.count(),
-  ])
-  return { userCount, courseCount, articleCount }
+interface Activity {
+  id: string
+  type: string
+  description: string
+  metadata: any
+  timestamp: Date
 }
 
-async function getRecentActivities() {
-  // This is a placeholder. In a real application, you would fetch this data from your database.
-  return [
-    { id: 1, action: "Новый пользователь зарегистрирован", timestamp: new Date().toISOString() },
-    { id: 2, action: "Курс 'Основы птицеводства' обновлен", timestamp: new Date().toISOString() },
-    { id: 3, action: "Новая статья добавлена в базу знаний", timestamp: new Date().toISOString() },
-  ]
-}
+export default function AdminPage() {
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
-export default async function AdminPage() {
-  const session = await auth()
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/admin/stats')
+        if (!response.ok) throw new Error('Failed to load stats')
+        const data = await response.json()
+        setStats(data)
+      } catch (error) {
+        console.error('Error loading stats:', error)
+        toast.error('Не удалось загрузить статистику')
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  if (!session || session.user.role !== "ADMIN") {
-    redirect("/")
+    loadStats()
+  }, [])
+
+  if (isLoading || !stats) {
+    return (
+      <div className="p-6">
+        <div className="space-y-4">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                    <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  const { userCount, courseCount, articleCount } = await getAdminData()
-  const recentActivities = await getRecentActivities()
-
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold mb-6">Панель администратора</h1>
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
+    <div className="p-6 space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Пользователи</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Пользователи
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{userCount}</p>
-            <Link href="/admin/users" className="block">
-              <Button className="w-full h-32 text-lg">
-                <div className="flex flex-col items-center">
-                  <span>Пользователи</span>
-                  <span className="text-sm text-muted-foreground">Управление пользователями</span>
-                </div>
-              </Button>
-            </Link>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold">{stats.users.total}</div>
+              <div className="text-xs text-muted-foreground">
+                +{stats.users.newToday} сегодня
+              </div>
+              <Progress value={stats.users.growth} className="h-1" />
+            </div>
+            <Button 
+              variant="ghost" 
+              className="w-full mt-4"
+              onClick={() => router.push('/admin/users')}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Управление
+            </Button>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader>
-            <CardTitle>Курсы</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Курсы
+            </CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{courseCount}</p>
-            <Link href="/admin/courses" className="block">
-              <Button className="w-full h-32 text-lg">
-                <div className="flex flex-col items-center">
-                  <span>Курсы</span>
-                  <span className="text-sm text-muted-foreground">Управление курсами</span>
-                </div>
-              </Button>
-            </Link>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold">{stats.courses.total}</div>
+              <div className="text-xs text-muted-foreground">
+                {stats.courses.published} опубликовано
+              </div>
+              <Progress 
+                value={(stats.courses.published / stats.courses.total) * 100} 
+                className="h-1" 
+              />
+            </div>
+            <Button 
+              variant="ghost" 
+              className="w-full mt-4"
+              onClick={() => router.push('/admin/courses')}
+            >
+              <BookMarked className="h-4 w-4 mr-2" />
+              Управление
+            </Button>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader>
-            <CardTitle>Статьи</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Статьи
+            </CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{articleCount}</p>
-            <Link href="/admin/articles" className="block">
-              <Button className="w-full h-32 text-lg">
-                <div className="flex flex-col items-center">
-                  <span>Статьи</span>
-                  <span className="text-sm text-muted-foreground">Управление статьями</span>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold">{stats.articles.total}</div>
+              <div className="text-xs text-muted-foreground">
+                {stats.articles.views} просмотров
+              </div>
+              <Progress 
+                value={(stats.articles.published / stats.articles.total) * 100} 
+                className="h-1" 
+              />
+            </div>
+            <Button 
+              variant="ghost" 
+              className="w-full mt-4"
+              onClick={() => router.push('/admin/articles')}
+            >
+              <FileUp className="h-4 w-4 mr-2" />
+              Управление
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Активность
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {stats.activities.slice(0, 3).map((activity) => (
+                <div key={activity.id} className="flex items-center text-sm">
+                  <Activity className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span className="truncate">{activity.description}</span>
                 </div>
-              </Button>
-            </Link>
+              ))}
+            </div>
+            <Button 
+              variant="ghost" 
+              className="w-full mt-4"
+              onClick={() => router.push('/admin/activity')}
+            >
+              Показать все
+            </Button>
           </CardContent>
         </Card>
       </div>
 
-      <h2 className="text-2xl font-bold mb-4">Недавние действия</h2>
       <Card>
-        <CardContent className="p-0">
-          <ul className="divide-y divide-gray-200">
-            {recentActivities.map((activity: Activity) => (
-              <li key={activity.id} className="flex items-center p-4">
-                <Activity className="h-5 w-5 text-gray-400 mr-3" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                  <p className="text-xs text-gray-500">{new Date(activity.timestamp).toLocaleString()}</p>
+        <CardHeader>
+          <CardTitle>Последние действия</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {stats.activities.map((activity) => (
+              <div 
+                key={activity.id} 
+                className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+              >
+                <div className="flex items-center space-x-4">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium leading-none">
+                      {activity.description}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(activity.timestamp).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-              </li>
+                <div className="ml-4">
+                  <Button variant="ghost" size="sm">
+                    Подробнее
+                  </Button>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </CardContent>
       </Card>
     </div>

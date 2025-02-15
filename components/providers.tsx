@@ -3,6 +3,7 @@
 import { ThemeProvider } from "next-themes"
 import { AuthProvider } from "./providers/session-provider"
 import { NotificationsProvider } from "@/components/notifications/notifications-context"
+import { AnimationProvider } from "@/components/providers/animation-provider"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +14,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem
       >
         <NotificationsProvider>
-          {children}
+          <AnimationProvider>
+            {children}
+          </AnimationProvider>
         </NotificationsProvider>
       </ThemeProvider>
     </AuthProvider>

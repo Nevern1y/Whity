@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { ArticlesList } from "@/components/articles-list"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"

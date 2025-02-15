@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { getIO } from "@/lib/socket-server"
 import { Prisma } from "@prisma/client"
 import { FriendshipValidator } from "@/lib/friendship-validator"
 import { FRIENDSHIP_STATUS, type FriendshipStatus } from "@/lib/constants"
+import { emitSocketEvent } from "@/lib/socket-server"
 
 const friendRequestSchema = z.object({
-  targetUserId: z.string().min(1)
+  targetUserId: z.string().min(1, "User ID is required")
 })
 
 interface Friendship {
@@ -27,103 +28,139 @@ interface FriendWithFriendships {
   receivedFriendships: Friendship[]
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const body = await request.json()
-    const validation = friendRequestSchema.safeParse(body)
-    
-    if (!validation.success) {
-      return NextResponse.json({ error: "Invalid request data" }, { status: 400 })
+    let body
+    try {
+      body = await req.json()
+    } catch (e) {
+      return new NextResponse("Invalid request body", { status: 400 })
     }
 
-    const { targetUserId } = validation.data
+    // Validate request body
+    const result = friendRequestSchema.safeParse(body)
+    if (!result.success) {
+      return new NextResponse(
+        JSON.stringify({ errors: result.error.errors }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
 
+    const { targetUserId } = result.data
+
+    // Validate self-friend request
     if (targetUserId === session.user.id) {
-      return NextResponse.json(
-        { error: "Cannot send friend request to yourself" },
-        { status: 400 }
+      return new NextResponse(
+        JSON.stringify({ error: "Cannot add yourself as a friend" }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
-    // Проверяем существующую дружбу
-    const existingFriendship = await prisma.friendship.findFirst({
-      where: {
-        OR: [
-          { senderId: session.user.id, receiverId: targetUserId },
-          { senderId: targetUserId, receiverId: session.user.id }
-        ]
-      }
-    })
-
-    if (existingFriendship) {
-      return NextResponse.json(
-        { error: "Friendship already exists", status: existingFriendship.status },
-        { status: 400 }
-      )
-    }
-
-    // Создаем новую заявку в друзья
-    const friendship = await prisma.friendship.create({
-      data: {
-        senderId: session.user.id,
-        receiverId: targetUserId,
-        status: FRIENDSHIP_STATUS.PENDING
-      }
-    })
-
-    // Отправляем уведомление через сокет
-    const io = getIO()
-    if (io) {
-      io.to(targetUserId).emit('friend_request', {
-        senderId: session.user.id,
-        status: FRIENDSHIP_STATUS.PENDING
-      })
-    }
-
-    // Получаем информацию о пользователе
-    const sender = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { 
-        id: true, 
-        name: true,
-        email: true,
-        image: true
-      }
-    })
-
-    if (!sender) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
-
-    // Проверяем существование целевого пользователя
+    // Check if target user exists
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId }
     })
 
     if (!targetUser) {
-      return NextResponse.json({ error: "Target user not found" }, { status: 404 })
+      return new NextResponse(
+        JSON.stringify({ error: "User not found" }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Создаем уведомление в базе
+    // Check existing friendship
+    const existingFriendship = await prisma.friendship.findFirst({
+      where: {
+        OR: [
+          {
+            senderId: session.user.id,
+            receiverId: targetUserId,
+          },
+          {
+            senderId: targetUserId,
+            receiverId: session.user.id,
+          }
+        ]
+      }
+    })
+
+    if (existingFriendship) {
+      const status = existingFriendship.status
+      const error = status === 'PENDING'
+        ? "Friend request already sent"
+        : status === 'ACCEPTED'
+        ? "Already friends"
+        : "Cannot send friend request"
+
+      return new NextResponse(
+        JSON.stringify({ error, status }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Create new friendship
+    const friendship = await prisma.friendship.create({
+      data: {
+        senderId: session.user.id,
+        receiverId: targetUserId,
+        status: FRIENDSHIP_STATUS.PENDING,
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          }
+        }
+      }
+    })
+
+    // Create notification for receiver
     await prisma.notification.create({
       data: {
         userId: targetUserId,
         type: 'FRIEND_REQUEST',
-        title: 'Новая заявка в друзья',
-        message: `${sender.name || 'Пользователь'} хочет добавить вас в друзья`,
-        link: '/friends'
+        title: 'Новый запрос в друзья',
+        message: `${session.user.name || 'Пользователь'} хочет добавить вас в друзья`,
+        link: `/friends`
       }
+    })
+
+    // Emit socket event
+    emitSocketEvent("friendship_request", {
+      friendshipId: friendship.id,
+      sender: friendship.sender,
+      receiver: friendship.receiver,
     })
 
     return NextResponse.json(friendship)
   } catch (error) {
     console.error("[FRIENDS_POST]", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return new NextResponse(
+        JSON.stringify({ error: "Database error", code: error.code }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    return new NextResponse(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
   }
 }
 
@@ -180,25 +217,21 @@ export async function PATCH(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    console.log('Getting friends for user:', session.user.id)
+    const userId = session.user.id
 
+    // Get all friendships for the current user
     const friendships = await prisma.friendship.findMany({
       where: {
-        AND: [
-          {
-            OR: [
-              { senderId: session.user.id },
-              { receiverId: session.user.id }
-            ]
-          },
-          { status: 'ACCEPTED' }
+        OR: [
+          { senderId: userId },
+          { receiverId: userId }
         ]
       },
       include: {
@@ -209,7 +242,7 @@ export async function GET() {
             email: true,
             image: true,
             isOnline: true,
-            lastActive: true
+            lastActive: true,
           }
         },
         receiver: {
@@ -219,28 +252,23 @@ export async function GET() {
             email: true,
             image: true,
             isOnline: true,
-            lastActive: true
+            lastActive: true,
           }
         }
+      },
+      orderBy: {
+        updatedAt: 'desc'
       }
     })
 
-    console.log('Raw friendships:', JSON.stringify(friendships, null, 2))
-
-    const friends = friendships.map(friendship => {
-      const friend = friendship.senderId === session.user.id 
-        ? friendship.receiver 
-        : friendship.sender
-      
-      return {
-        ...friend,
-        friendshipId: friendship.id,
-        friendshipStatus: 'ACCEPTED'
-      }
+    // Filter out invalid friendships
+    const validFriendships = friendships.filter(friendship => {
+      const senderValid = friendship.sender && friendship.sender.id
+      const receiverValid = friendship.receiver && friendship.receiver.id
+      return senderValid && receiverValid
     })
 
-    console.log('Formatted friends:', JSON.stringify(friends, null, 2))
-    return NextResponse.json(friends)
+    return NextResponse.json(validFriendships)
   } catch (error) {
     console.error("[FRIENDS_GET]", error)
     return new NextResponse("Internal Error", { status: 500 })

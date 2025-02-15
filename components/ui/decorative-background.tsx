@@ -1,62 +1,81 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { useAnimation } from "@/components/providers/animation-provider"
+import { cn } from "@/lib/utils"
 
-export function DecorativeBackground() {
+interface DecorativeBackgroundProps {
+  className?: string
+  children: React.ReactNode
+}
+
+export function DecorativeBackground({ className, children }: DecorativeBackgroundProps) {
+  const { m, isReady } = useAnimation()
+
+  if (!isReady || !m) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-xl",
+          "bg-gradient-to-br from-primary/5 via-primary/2 to-transparent",
+          "border border-primary/10",
+          className
+        )}
+      >
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px]" />
+          <div className="absolute inset-0 animate-wave opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
+          <div className="absolute inset-0 animate-wave-slow opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
+        </div>
+        <div className="relative z-10">
+          {children}
+        </div>
+      </div>
+    )
+  }
+
+  const MotionDiv = m.div
+
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
-      {/* Градиентный фон */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background to-muted/50" />
-      
-      {/* Декоративные линии */}
-      <svg
-        className="absolute inset-0 w-full h-full opacity-[0.03] dark:opacity-[0.02]"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
+    <MotionDiv
+      className={cn(
+        "relative overflow-hidden rounded-xl",
+        "bg-gradient-to-br from-primary/5 via-primary/2 to-transparent",
+        "border border-primary/10",
+        className
+      )}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Animated background elements */}
+      <MotionDiv
+        className="absolute inset-0 -z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
       >
-        <pattern
-          id="grid"
-          width="10"
-          height="10"
-          patternUnits="userSpaceOnUse"
-        >
-          <path
-            d="M 10 0 L 0 0 0 10"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.5"
-          />
-        </pattern>
-        <rect width="100" height="100" fill="url(#grid)" />
-      </svg>
+        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px]" />
+        <div className="absolute inset-0 animate-wave opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
+        <div className="absolute inset-0 animate-wave-slow opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
+      </MotionDiv>
 
-      {/* Анимированные круги */}
-      <motion.div
-        className="absolute -top-1/2 -right-1/2 w-full h-full"
-        animate={{
-          rotate: [0, 360],
-        }}
-        transition={{
-          duration: 50,
-          repeat: Infinity,
-          ease: "linear",
-        }}
+      {/* Content */}
+      <MotionDiv
+        className="relative z-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
       >
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      </motion.div>
-      <motion.div
-        className="absolute -bottom-1/2 -left-1/2 w-full h-full"
-        animate={{
-          rotate: [360, 0],
-        }}
-        transition={{
-          duration: 50,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      >
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      </motion.div>
-    </div>
+        {children}
+      </MotionDiv>
+
+      {/* Highlight effect */}
+      <MotionDiv
+        className="absolute inset-0 bg-gradient-to-tr from-transparent via-primary/2 to-primary/5 pointer-events-none"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      />
+    </MotionDiv>
   )
 } 

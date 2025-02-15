@@ -1,6 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
+const { m } = useAnimation()
+import { useAnimation } from "@/components/providers/animation-provider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
@@ -27,7 +28,7 @@ export function AchievementCard({
   const progressPercentage = (progress / requirement) * 100
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ scale: 1.02 }}
@@ -49,13 +50,13 @@ export function AchievementCard({
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">{title}</h3>
                 {completed && (
-                  <motion.div
+                  <m.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     className="text-primary"
                   >
                     ✓
-                  </motion.div>
+                  </m.div>
                 )}
               </div>
               <p className="text-sm text-muted-foreground">{description}</p>
@@ -74,6 +75,6 @@ export function AchievementCard({
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </m.div>
   )
 } 

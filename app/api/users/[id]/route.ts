@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(
@@ -75,6 +75,7 @@ export async function GET(
 
     // Calculate friendship status if logged in
     let friendshipStatus = 'NONE'
+    let isReceivedRequest = false
     if (session?.user?.id) {
       const friendship = await prisma.friendship.findFirst({
         where: {
@@ -84,12 +85,17 @@ export async function GET(
           ]
         }
       })
-      friendshipStatus = friendship?.status || 'NONE'
+      if (friendship) {
+        friendshipStatus = friendship.status
+        // Check if current user is the receiver of the request
+        isReceivedRequest = friendship.status === 'PENDING' && friendship.receiverId === session.user.id
+      }
     }
 
     return NextResponse.json({
       ...user,
       friendshipStatus,
+      isReceivedRequest,
       isOwnProfile: session?.user?.id === params.id
     })
   } catch (error) {

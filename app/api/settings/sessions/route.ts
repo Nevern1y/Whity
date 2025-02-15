@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { UAParser } from "ua-parser-js"
 import { SessionService } from "@/lib/session-service"

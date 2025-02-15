@@ -1,8 +1,8 @@
 "use client"
 
-import { motion } from "framer-motion"
 import { Users, BookOpen, Award, Trophy } from "lucide-react"
 import CountUp from 'react-countup'
+import { useAnimation } from "@/components/providers/animation-provider"
 
 const stats = [
   {
@@ -32,13 +32,45 @@ const stats = [
 ]
 
 export function StatsSection() {
+  const { m, isReady } = useAnimation()
+
+  if (!isReady) {
+    return (
+      <section className="container py-8 md:py-12">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-8">
+          {stats.map((stat) => {
+            const Icon = stat.icon
+            return (
+              <div
+                key={stat.label}
+                className="flex flex-col items-center justify-center space-y-2 text-center p-4"
+              >
+                <div className="flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-2xl md:text-3xl font-bold tracking-tighter text-foreground">
+                    {stat.value}{stat.suffix}
+                  </h3>
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground md:text-base">
+                    {stat.label}
+                  </p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="container py-8 md:py-12">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-8">
         {stats.map((stat, index) => {
           const Icon = stat.icon
           return (
-            <motion.div
+            <m.div
               key={stat.label}
               className="flex flex-col items-center justify-center space-y-2 text-center p-4"
               initial={{ opacity: 0, y: 20 }}
@@ -64,7 +96,7 @@ export function StatsSection() {
                   {stat.label}
                 </p>
               </div>
-            </motion.div>
+            </m.div>
           )
         })}
       </div>
